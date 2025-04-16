@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>License Plate Recognition</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .video-container {
+            flex: 2;
+            min-width: 600px;
+            background-color: #222;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .plates-container {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        #video_feed {
+            width: 100%;
+            height: auto;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.disconnect {
+            background-color: #f44336;
+        }
+        button.disconnect:hover {
+            background-color: #d32f2f;
+        }
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status.connected {
+            background-color: #dff0d8;
+            color: #3c763d;
+        }
+        .status.disconnected {
+            background-color: #f2dede;
+            color: #a94442;
+        }
+        .plate-item {
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+        }
+        .plate-text {
+            font-weight: bold;
+        }
+        .plate-score {
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>License Plate Recognition System</h1>
+        </div>
+
+        <div class="content">
+            <div class="video-container">
+                <img id="video_feed" src="{{ url_for('video_feed') }}">
+            </div>
+
+            <div class="controls">
+                <h2>Camera Controls</h2>
+                <div class="status disconnected" id="status_indicator">
+                    Camera disconnected
+                </div>
+
+                <select id="camera_select">
+                    <option value="0">USB Camera</option>
+                    <option value="http://192.168.1.106:4747/mjpegfeed?960x720">Camera 1</option>
+                    <option value="http://192.168.1.120:4747/video?960x720">Camera 2</option>
+                </select>
+
+                <button id="connect_btn">Connect Camera</button>
+                <button id="disconnect_btn" class="disconnect" disabled>Disconnect</button>
+
+                <h2>Settings</h2>
+                <label for="threshold">Recognition Threshold (0.1-0.99):</label>
+                <input type="number" id="threshold" min="0.1" max="0.99" step="0.01" value="0.85">
+                <button id="set_threshold">Set Threshold</button>
+            </div>
+
+            <div class="plates-container">
+                <h2>Recognized Plates</h2>
+                <div id="plates_list">
+                    <!-- Plates will be added here dynamically -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const connectBtn = document.getElementById('connect_btn');
+            const disconnectBtn = document.getElementById('disconnect_btn');
+            const cameraSelect = document.getElementById('camera_select');
+            const thresholdInput = document.getElementById('threshold');
+            const setThresholdBtn = document.getElementById('set_threshold');
+            const statusIndicator = document.getElementById('status_indicator');
+            const platesList = document.getElementById('plates_list');
+
+            let isConnected = false;
+
+            // Update plates list periodically
+            function updatePlatesList() {
+                fetch('/get_recognized_plates')
+                    .then(response => response.json())
+                    .then(data => {
+                        platesList.innerHTML = '';
+                        data.plates.forEach(plate => {
+                            const plateItem = document.createElement('div');
+                            plateItem.className = 'plate-item';
+                            plateItem.innerHTML = `
+                                <div class="plate-text">${plate.text}</div>
+                                <div class="plate-score">Confidence: ${plate.score.toFixed(2)}</div>
+                            `;
+                            platesList.appendChild(plateItem);
+                        });
+                    })
+                    .catch(error => console.error('Error fetching plates:', error));
+
+                setTimeout(updatePlatesList, 1000);
+            }
+
+            // Start updating plates list
+            updatePlatesList();
+
+            // Connect camera
+            connectBtn.addEventListener('click', function() {
+                const cameraUrl = cameraSelect.value === '0' ? 0 : cameraSelect.value;
+
+                fetch('/connect_camera', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ camera_url: cameraUrl })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        isConnected = true;
+                        statusIndicator.textContent = 'Camera connected';
+                        statusIndicator.className = 'status connected';
+                        connectBtn.disabled = true;
+                        disconnectBtn.disabled = false;
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to connect to camera');
+                });
+            });
+
+            // Disconnect camera
+            disconnectBtn.addEventListener('click', function() {
+                fetch('/disconnect_camera', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        isConnected = false;
+                        statusIndicator.textContent = 'Camera disconnected';
+                        statusIndicator.className = 'status disconnected';
+                        connectBtn.disabled = false;
+                        disconnectBtn.disabled = true;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            });
+
+            // Set recognition threshold
+            setThresholdBtn.addEventListener('click', function() {
+                const threshold = parseFloat(thresholdInput.value);
+                if (isNaN(threshold) || threshold < 0.1 || threshold > 0.99) {
+                    alert('Please enter a valid threshold between 0.1 and 0.99');
+                    return;
+                }
+
+                fetch('/set_threshold', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ threshold: threshold })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(`Threshold set to ${data.threshold}`);
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Failed to set threshold');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
