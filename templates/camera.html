@@ -1,0 +1,69 @@
+<!--file camera.html-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera View</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+        }
+        .video-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #video_feed {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .camera-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="camera-info">
+        <h2 id="camera_name">Camera</h2>
+        <div id="camera_url"></div>
+    </div>
+    <div class="video-container">
+        <img id="video_feed" src="">
+    </div>
+
+    <script>
+        // Get camera ID from URL
+        const cameraId = window.location.pathname.split('/').pop();
+
+        // Get camera info
+        fetch(`/api/camera_info/${cameraId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('camera_name').textContent = data.name;
+                    document.getElementById('camera_url').textContent = data.url;
+                    document.title = `${data.name} - LPR`;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching camera info:', error);
+            });
+
+        // Set video source
+        document.getElementById('video_feed').src = `/video_feed/${cameraId}`;
+    </script>
+</body>
+</html>

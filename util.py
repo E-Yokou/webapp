@@ -499,42 +499,42 @@ def get_car(license_plate, vehicle_track_ids):
 
 def insert_car_data(license_plate_text, photo, car_type, date, camera_id):
     """Insert car data into the database with duplicate check."""
-    conn = None
-    try:
-        conn = mysql.connector.connect(**db_config)
-        cursor = conn.cursor()
-
-        # First, check if this plate was already recorded recently (last 5 minutes)
-        check_query = """
-        SELECT id FROM car 
-        WHERE car_number = %s AND date >= DATE_SUB(%s, INTERVAL 1 MINUTE)
-        LIMIT 1
-        """
-        cursor.execute(check_query, (license_plate_text, date))
-        if cursor.fetchone():
-            logging.info(f"Plate {license_plate_text} already recorded recently - skipping")
-            return
-
-        # Get camera ID if camera name was provided
-        if camera_id and not str(camera_id).isdigit():
-            cursor.execute("SELECT id FROM camera WHERE name = %s", (camera_id,))
-            result = cursor.fetchone()
-            if result:
-                camera_id = result[0]
-            else:
-                camera_id = None
-
-        insert_query = """
-        INSERT INTO car (photo, car_type, car_number, date, camera_id)
-        VALUES (%s, %s, %s, %s, %s)
-        """
-        cursor.execute(insert_query, (photo, car_type, license_plate_text, date, camera_id))
-        conn.commit()
-        logging.info(f"Successfully inserted plate: {license_plate_text}")
-
-    except mysql.connector.Error as err:
-        logging.error(f"MySQL error: {err}")
-    finally:
-        if conn and conn.is_connected():
-            cursor.close()
-            conn.close()
+    # conn = None
+    # try:
+    #     conn = mysql.connector.connect(**db_config)
+    #     cursor = conn.cursor()
+    #
+    #     # First, check if this plate was already recorded recently (last 5 minutes)
+    #     check_query = """
+    #     SELECT id FROM car
+    #     WHERE car_number = %s AND date >= DATE_SUB(%s, INTERVAL 1 MINUTE)
+    #     LIMIT 1
+    #     """
+    #     cursor.execute(check_query, (license_plate_text, date))
+    #     if cursor.fetchone():
+    #         logging.info(f"Plate {license_plate_text} already recorded recently - skipping")
+    #         return
+    #
+    #     # Get camera ID if camera name was provided
+    #     if camera_id and not str(camera_id).isdigit():
+    #         cursor.execute("SELECT id FROM camera WHERE name = %s", (camera_id,))
+    #         result = cursor.fetchone()
+    #         if result:
+    #             camera_id = result[0]
+    #         else:
+    #             camera_id = None
+    #
+    #     insert_query = """
+    #     INSERT INTO car (photo, car_type, car_number, date, camera_id)
+    #     VALUES (%s, %s, %s, %s, %s)
+    #     """
+    #     cursor.execute(insert_query, (photo, car_type, license_plate_text, date, camera_id))
+    #     conn.commit()
+    #     logging.info(f"Successfully inserted plate: {license_plate_text}")
+    #
+    # except mysql.connector.Error as err:
+    #     logging.error(f"MySQL error: {err}")
+    # finally:
+    #     if conn and conn.is_connected():
+    #         cursor.close()
+    #         conn.close()
