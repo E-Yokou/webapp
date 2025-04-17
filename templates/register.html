@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация | ЗАО "Муром"</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --danger: #e74c3c;
+            --warning: #f39c12;
+            --info: #2980b9;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --white: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 450px;
+            background-color: var(--white);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .register-header {
+            background-color: var(--primary);
+            color: var(--white);
+            padding: 20px;
+            text-align: center;
+        }
+
+        .register-header h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .register-header p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+
+        .register-body {
+            padding: 30px;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .logo i {
+            font-size: 3rem;
+            color: var(--secondary);
+            margin-bottom: 10px;
+        }
+
+        .logo h2 {
+            color: var(--primary);
+            font-size: 1.3rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--secondary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: 12px;
+            border-radius: 5px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary);
+            color: var(--white);
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .register-footer {
+            text-align: center;
+            padding: 15px;
+            border-top: 1px solid #eee;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .register-footer a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+
+        .register-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-danger {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+            border-left: 4px solid var(--danger);
+        }
+
+        .alert i {
+            font-size: 1.2rem;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group .form-control {
+            padding-right: 40px;
+        }
+
+        .input-group-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+        }
+
+        .password-strength {
+            height: 5px;
+            background-color: #eee;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            background-color: var(--danger);
+            transition: width 0.3s ease;
+        }
+
+        .password-hint {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .terms {
+            font-size: 0.85rem;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .terms a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+
+        .terms a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <h1>ЗАО "Муром"</h1>
+            <p>Система учета автотранспорта на КПП</p>
+        </div>
+
+        <div class="register-body">
+            <div class="logo">
+                <i class="fas fa-user-plus"></i>
+                <h2>Создание учетной записи</h2>
+            </div>
+
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        {% for message in messages %}
+                            {{ message }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="username" class="form-label">Имя пользователя</label>
+                    <div class="input-group">
+                        <input type="text" id="username" name="username" class="form-control" placeholder="Придумайте имя пользователя" required>
+                        <i class="fas fa-user input-group-icon"></i>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Пароль</label>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Придумайте пароль" required>
+                        <i class="fas fa-lock input-group-icon"></i>
+                    </div>
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="password_strength"></div>
+                    </div>
+                    <div class="password-hint">
+                        Пароль должен содержать не менее 8 символов, включая цифры и буквы
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password" class="form-label">Подтверждение пароля</label>
+                    <div class="input-group">
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Повторите пароль" required>
+                        <i class="fas fa-lock input-group-icon"></i>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Зарегистрироваться
+                </button>
+
+                <div class="terms">
+                    Нажимая кнопку, вы соглашаетесь с <a href="#">условиями использования</a> и <a href="#">политикой конфиденциальности</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="register-footer">
+            Уже есть учетная запись? <a href="{{ url_for('login') }}">Войти</a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const passwordInput = document.getElementById('password');
+            const passwordStrength = document.getElementById('password_strength');
+
+            passwordInput.addEventListener('input', function() {
+                const password = this.value;
+                let strength = 0;
+
+                // Проверка длины пароля
+                if (password.length >= 8) strength += 20;
+                if (password.length >= 12) strength += 20;
+
+                // Проверка на наличие цифр
+                if (/\d/.test(password)) strength += 20;
+
+                // Проверка на наличие букв в верхнем регистре
+                if (/[A-Z]/.test(password)) strength += 20;
+
+                // Проверка на наличие специальных символов
+                if (/[^A-Za-z0-9]/.test(password)) strength += 20;
+
+                // Установка цвета в зависимости от силы пароля
+                if (strength < 40) {
+                    passwordStrength.style.backgroundColor = '#e74c3c';
+                } else if (strength < 80) {
+                    passwordStrength.style.backgroundColor = '#f39c12';
+                } else {
+                    passwordStrength.style.backgroundColor = '#27ae60';
+                }
+
+                passwordStrength.style.width = strength + '%';
+            });
+        });
+    </script>
+</body>
+</html>
