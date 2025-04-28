@@ -16,11 +16,13 @@ import os
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import Flask, render_template, request, jsonify, Response, session, flash, redirect, url_for, \
-    send_from_directory
+    send_from_directory, send_file
 from auth import admin_required, login_required
 from sort.sort import Sort
 from ultralytics import YOLO
 from util import read_license_plate, get_car, is_plate_inside_car, get_plate_center, get_car_center
+import io
+import xlsxwriter
 
 app = Flask(__name__)
 
@@ -95,41 +97,13 @@ def init_db():
     conn = sqlite3.connect('users.db')
     c = conn.cursor()
 
-    # Проверяем существование таблицы
-    c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-    table_exists = c.fetchone()
-
-    if table_exists:
-        # Проверяем существование колонки created_at
-        c.execute("PRAGMA table_info(users)")
-        columns = [column[1] for column in c.fetchall()]
-
-        if 'created_at' not in columns:
-            # Создаем временную таблицу с новой структурой
-            c.execute('''CREATE TABLE IF NOT EXISTS users_new
-                         (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                          username TEXT UNIQUE NOT NULL,
-                          password TEXT NOT NULL,
-                          role TEXT DEFAULT 'user',
-                          created_at DATETIME DEFAULT (datetime('now')))''')
-
-            # Копируем данные из старой таблицы
-            c.execute(
-                "INSERT INTO users_new (id, username, password, role) SELECT id, username, password, role FROM users")
-
-            # Удаляем старую таблицу
-            c.execute("DROP TABLE users")
-
-            # Переименовываем новую таблицу
-            c.execute("ALTER TABLE users_new RENAME TO users")
-    else:
-        # Создаем таблицу с нужными колонками
-        c.execute('''CREATE TABLE users
-                     (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                      username TEXT UNIQUE NOT NULL,
-                      password TEXT NOT NULL,
-                      role TEXT DEFAULT 'user',
-                      created_at DATETIME DEFAULT (datetime('now')))''')
+    # Создаем таблицу с нужными колонками
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 username TEXT UNIQUE NOT NULL,
+                 password TEXT NOT NULL,
+                 role TEXT DEFAULT 'user',
+                 created_at DATETIME DEFAULT (datetime('now')))''')
 
     # Создаем администратора по умолчанию, если его нет
     c.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
@@ -251,14 +225,6 @@ def get_all_users():
     return users
 
 
-@app.route('/api/camera_status/<int:camera_id>')
-@login_required
-def get_camera_status(camera_id):
-    """Возвращает текущий статус камеры"""
-    status = camera_states.get(camera_id, {'connected': False})
-    return jsonify(status)
-
-
 @app.route('/api/plate_image/<int:plate_id>')
 @login_required
 def get_plate_image(plate_id):
@@ -272,6 +238,7 @@ def get_plate_image(plate_id):
     if image_data:
         return Response(image_data[0], mimetype='image/jpeg')
     return jsonify({'status': 'error', 'message': 'Image not found'}), 404
+
 
 def update_user_role(user_id, new_role):
     """Обновляет роль пользователя"""
@@ -422,14 +389,16 @@ def logout():
 
 
 @app.route('/register', methods=['GET', 'POST'])
+@admin_required
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         confirm_password = request.form['confirm_password']
+        role = request.form.get('role', 'user')
 
         if password != confirm_password:
-            flash('Passwords do not match')
+            flash('Пароли не совпадают')
             return redirect(url_for('register'))
 
         hashed_password = generate_password_hash(password)
@@ -437,14 +406,14 @@ def register():
         try:
             conn = sqlite3.connect('users.db')
             c = conn.cursor()
-            c.execute("INSERT INTO users (username, password) VALUES (?, ?)",
-                      (username, hashed_password))
+            c.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+                      (username, hashed_password, role))
             conn.commit()
             conn.close()
-            flash('Registration successful. Please login.')
-            return redirect(url_for('login'))
+            flash('Пользователь успешно создан.')
+            return redirect(url_for('user_management'))
         except sqlite3.IntegrityError:
-            flash('Username already exists')
+            flash('Имя пользователя уже существует')
             return redirect(url_for('register'))
 
     return render_template('register.html')
@@ -578,67 +547,210 @@ def process_frame(frame, camera_id=None):
         logging.error(f"Error in process_frame: {e}")
         return frame
 
+def is_valid_camera_url(url):
+    if not url:
+        return False
+    return url.startswith(('rtsp://', 'http://', 'https://'))
+
+
+@app.route('/api/camera/<int:camera_id>/reconnect', methods=['POST'])
+def reconnect_camera(camera_id):
+    if camera_id not in camera_instances:
+        return jsonify({'status': 'error', 'message': 'Camera not found'}), 404
+
+    instance = camera_instances[camera_id]
+    instance['stop_event'].set()
+
+    # Даем потоку время завершиться
+    time.sleep(0.5)
+
+    # Запускаем новый поток
+    stop_event = threading.Event()
+    thread = threading.Thread(
+        target=camera_processing,
+        args=(camera_id, instance['url'], stop_event),
+        daemon=True
+    )
+    thread.start()
+
+    return jsonify({'status': 'success'})
+
 
 def camera_processing(camera_id, camera_url, stop_event):
-    global camera_states
-    camera_states[camera_id] = {'connected': False}
+    global camera_states, camera_instances
+
+    # Инициализация состояния камеры
+    camera_states[camera_id] = {
+        'connected': False,
+        'last_activity': datetime.now().isoformat(),
+        'error_count': 0
+    }
+
+    cap = None
+    video_writer = None
 
     try:
+        logging.info(f"Инициализация обработки камеры {camera_id} ({camera_url})")
 
+        # Параметры для стабильного подключения (совместимая версия)
         cap = cv2.VideoCapture(camera_url)
-        camera_states[camera_id]['connected'] = cap.isOpened()
-        frame_queue = queue.Queue(maxsize=2)
-        # Wait for camera to initialize
-        retries = 0
-        while not cap.isOpened() and retries < 10:
-            time.sleep(0.1)
-            retries += 1
 
-        if not cap.isOpened():
-            logging.error(f"Failed to open camera {camera_id} at {camera_url}")
-            return
+        # Пытаемся установить параметры, если они доступны
+        try:
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            cap.set(cv2.CAP_PROP_FPS, 15)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        except AttributeError as e:
+            logging.warning(f"Некоторые свойства камеры недоступны: {str(e)}")
 
+        # Альтернативный способ установки таймаута
+        timeout = 10  # секунд
+        start_time = time.time()
+
+        while not cap.isOpened():
+            if time.time() - start_time > timeout:
+                logging.error(f"Таймаут подключения к камере {camera_id}")
+                camera_states[camera_id].update({
+                    'connected': False,
+                    'last_error': 'Timeout при подключении'
+                })
+                return
+            time.sleep(0.2)
+
+        # Успешное подключение
+        camera_states[camera_id].update({
+            'connected': True,
+            'last_activity': datetime.now().isoformat(),
+            'error_count': 0
+        })
+
+        frame_queue = queue.Queue(maxsize=3)  # Ограничение очереди
+
+        # Сохраняем экземпляр камеры
         camera_instances[camera_id] = {
             'cap': cap,
             'frame_queue': frame_queue,
             'stop_event': stop_event,
             'thread': threading.current_thread(),
             'recording': False,
-            'video_writer': None
+            'video_writer': None,
+            'recording_file': None,
+            'last_frame_time': time.time()
         }
 
-        logging.info(f"Started processing for camera {camera_id}")
+        logging.info(f"Камера {camera_id} успешно активирована")
 
+        # Основной цикл обработки
         while not stop_event.is_set():
-            ret, frame = cap.read()
-            if ret:
+            try:
+                # Чтение кадра
+                ret, frame = cap.read()
+                current_time = time.time()
+
+                if not ret:
+                    error_msg = f"Камера {camera_id} вернула пустой кадр"
+                    logging.warning(error_msg)
+                    camera_states[camera_id]['error_count'] += 1
+                    camera_states[camera_id]['last_error'] = error_msg
+
+                    # Попытка восстановления
+                    if camera_states[camera_id]['error_count'] > 5:
+                        logging.warning(f"Переподключение камеры {camera_id}...")
+                        cap.release()
+                        cap = cv2.VideoCapture(camera_url)
+                        if not cap.isOpened():
+                            raise ConnectionError(f"Не удалось переподключиться к камере {camera_id}")
+                        camera_instances[camera_id]['cap'] = cap
+                        camera_states[camera_id]['error_count'] = 0
+
+                    time.sleep(0.5)
+                    continue
+
+                # Успешное получение кадра
+                camera_states[camera_id].update({
+                    'connected': True,
+                    'last_activity': datetime.now().isoformat(),
+                    'error_count': 0,
+                    'fps': 1 / (current_time - camera_instances[camera_id]['last_frame_time'])
+                })
+                camera_instances[camera_id]['last_frame_time'] = current_time
+
+                # Обработка кадра
+                processed_frame = process_frame(frame, camera_id)
+
+                # Запись видео если активирована
+                if camera_instances[camera_id].get('recording'):
+                    try:
+                        if video_writer is None:
+                            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                            try:
+                                fps = cap.get(cv2.CAP_PROP_FPS)
+                            except:
+                                fps = 15
+
+                            try:
+                                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                            except:
+                                width, height = 640, 480
+
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            filename = f"recording_{camera_id}_{timestamp}.avi"
+                            filepath = os.path.join(RECORDINGS_DIR, filename)
+                            video_writer = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+                            camera_instances[camera_id]['video_writer'] = video_writer
+                            camera_instances[camera_id]['recording_file'] = filepath
+
+                        video_writer.write(processed_frame)
+                    except Exception as e:
+                        logging.error(f"Ошибка записи видео: {str(e)}")
+                        camera_instances[camera_id]['recording'] = False
+
+                # Добавление кадра в очередь
                 try:
-                    processed_frame = process_frame(frame, camera_id)
-
-                    # Если идет запись, сохраняем кадр
-                    if camera_instances[camera_id].get('recording') and 'video_writer' in camera_instances[camera_id]:
-                        camera_instances[camera_id]['video_writer'].write(processed_frame)
-
-                    _, buffer = cv2.imencode('.jpg', processed_frame)
-                    frame_queue.put(buffer.tobytes())
+                    _, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                    frame_queue.put(buffer.tobytes(), timeout=0.5)
                 except queue.Full:
-                    pass  # Skip frame if queue is full
+                    logging.warning(f"Очередь кадров камеры {camera_id} переполнена")
                 except Exception as e:
-                    logging.error(f"Error processing frame for camera {camera_id}: {e}")
-            else:
-                logging.warning(f"Camera {camera_id} returned no frame")
-                time.sleep(0.1)
+                    logging.error(f"Ошибка кодирования кадра: {str(e)}")
 
-        # Останавливаем запись при завершении
-        if 'video_writer' in camera_instances[camera_id]:
-            camera_instances[camera_id]['video_writer'].release()
+            except Exception as frame_error:
+                logging.error(f"Ошибка обработки кадра: {str(frame_error)}")
+                camera_states[camera_id]['last_error'] = str(frame_error)
+                time.sleep(1)  # Защита от зацикливания
 
-        cap.release()
-        if camera_id in camera_instances:
-            del camera_instances[camera_id]
-        logging.info(f"Stopped processing for camera {camera_id}")
+    except Exception as main_error:
+        logging.critical(f"Критическая ошибка обработки камеры {camera_id}: {str(main_error)}")
+        camera_states[camera_id].update({
+            'connected': False,
+            'last_error': str(main_error)
+        })
+
     finally:
-        camera_states[camera_id]['connected'] = False
+        # Корректное завершение
+        logging.info(f"Завершение обработки камеры {camera_id}")
+
+        try:
+            if video_writer is not None:
+                video_writer.release()
+
+            if cap is not None:
+                try:
+                    if cap.isOpened():
+                        cap.release()
+                except:
+                    pass
+
+            if camera_id in camera_instances:
+                del camera_instances[camera_id]
+
+            camera_states[camera_id]['connected'] = False
+            camera_states[camera_id]['shutdown_time'] = datetime.now().isoformat()
+
+        except Exception as cleanup_error:
+            logging.error(f"Ошибка при завершении: {str(cleanup_error)}")
 
 
 def gen_camera_frames(camera_id):
@@ -783,6 +895,9 @@ def manage_users():
         if not username or not password:
             return jsonify({'status': 'error', 'message': 'Username and password are required'}), 400
 
+        if role not in ['user', 'admin']:
+            return jsonify({'status': 'error', 'message': 'Invalid role'}), 400
+
         hashed_password = generate_password_hash(password)
 
         try:
@@ -814,7 +929,13 @@ def manage_users():
         if not user_id:
             return jsonify({'status': 'error', 'message': 'User ID is required'}), 400
 
+        # Запрещаем пользователю изменять свою собственную роль
+        if user_id == session.get('user_id'):
+            return jsonify({'status': 'error', 'message': 'Cannot change your own role'}), 400
+
         if new_role:
+            if new_role not in ['user', 'admin']:
+                return jsonify({'status': 'error', 'message': 'Invalid role'}), 400
             update_user_role(user_id, new_role)
 
         if new_password:
@@ -834,6 +955,39 @@ def manage_users():
 
         delete_user(user_id)
         return jsonify({'status': 'success'})
+    return None
+
+
+@app.route('/api/settings', methods=['GET', 'POST'])
+@admin_required
+def manage_settings():
+    if request.method == 'GET':
+        # Return current settings
+        return jsonify({
+            'threshold': config.get('threshold', 0.85),
+            'region': config.get('region', 'ru'),
+            'enable_alpr': config.get('enable_alpr', True),
+            'save_images': config.get('save_images', True),
+            'email_notifications': config.get('email_notifications', False),
+            'max_age': config.get('max_age', 30),
+            'delete_before_date': config.get('delete_before_date', '')
+        })
+
+    elif request.method == 'POST':
+        # Update settings
+        data = request.json
+        config.update({
+            'threshold': float(data.get('threshold', config.get('threshold', 0.85))),
+            'region': data.get('region', config.get('region', 'ru')),
+            'enable_alpr': bool(data.get('enable_alpr', config.get('enable_alpr', True))),
+            'save_images': bool(data.get('save_images', config.get('save_images', True))),
+            'email_notifications': bool(data.get('email_notifications', config.get('email_notifications', False))),
+            'max_age': int(data.get('max_age', config.get('max_age', 30))),
+            'delete_before_date': data.get('delete_before_date', config.get('delete_before_date', ''))
+        })
+        save_config(config)
+        return jsonify({'status': 'success'})
+    return None
 
 
 @app.route('/dashboard')
@@ -872,13 +1026,17 @@ def event_history():
     return render_template('index.html', config=config, user=session.get('username'), role=session.get('role'))
 
 
-@app.route('/api/cameras', methods=['GET', 'POST', 'DELETE'])
+@app.route('/api/cameras', methods=['GET'])
+@login_required
+def get_cameras():
+    """Возвращает список камер (доступно всем авторизованным пользователям)"""
+    return jsonify({'cameras': config['cameras']})
+
+@app.route('/api/cameras', methods=['POST', 'DELETE'])
 @admin_required
 def manage_cameras():
-    if request.method == 'GET':
-        return jsonify({'cameras': config['cameras']})
-
-    elif request.method == 'POST':
+    """Изменение камер доступно только администраторам"""
+    if request.method == 'POST':
         data = request.json
         if 'url' not in data or 'name' not in data:
             return jsonify({'status': 'error', 'message': 'Missing url or name'}), 400
@@ -912,13 +1070,43 @@ def manage_cameras():
 
         return jsonify({'status': 'success'})
 
+@app.route('/api/cameras/status')
+def get_cameras_status():
+    statuses = {}
+    for camera_id, instance in camera_instances.items():
+        statuses[camera_id] = {
+            'connected': instance['cap'].isOpened() if 'cap' in instance else False,
+            'processing': not instance['stop_event'].is_set() if 'stop_event' in instance else False
+        }
+    return jsonify(statuses)
+
+@app.route('/api/camera_status/<int:camera_id>')
+@login_required
+def get_camera_status(camera_id):
+    """Возвращает текущий статус камеры (доступно всем авторизованным пользователям)"""
+    status = camera_states.get(camera_id, {'connected': False})
+
+    # Добавляем дополнительную информацию для администраторов
+    if session.get('role') == 'admin':
+        camera = next((cam for cam in config['cameras'] if cam['id'] == camera_id), None)
+        if camera:
+            status['camera_info'] = {
+                'name': camera['name'],
+                'url': camera['url']
+            }
+
+    return jsonify(status)
+
+def is_camera_alive(camera_id):
+    if camera_id not in camera_instances:
+        return False
+    cap = camera_instances[camera_id].get('cap')
+    return cap is not None and cap.isOpened()
 
 @app.route('/api/connect', methods=['POST'])
 @admin_required
 def connect_camera():
-    global main_cap, main_processing_thread
     data = request.json
-
     if 'id' not in data:
         return jsonify({'status': 'error', 'message': 'Missing camera id'}), 400
 
@@ -926,29 +1114,40 @@ def connect_camera():
     if not camera:
         return jsonify({'status': 'error', 'message': 'Camera not found'}), 404
 
-    # Check if this camera is already being processed
-    if data['id'] in camera_instances:
-        config['current_camera'] = data['id']
-        save_config(config)
+    # Проверяем, не запущена ли уже камера
+    if is_camera_alive(data['id']):
         return jsonify({'status': 'success', 'camera': camera})
 
-    # Start processing this camera
+    if not is_valid_camera_url(camera['url']):
+        return jsonify({'status': 'error', 'message': 'Invalid camera URL'}), 400
+
+    # Если камера в словаре, но не работает - очищаем
+    if data['id'] in camera_instances:
+        old_instance = camera_instances[data['id']]
+        if 'cap' in old_instance:
+            old_instance['cap'].release()
+        if 'stop_event' in old_instance:
+            old_instance['stop_event'].set()
+        del camera_instances[data['id']]
+
+    # Запускаем новый поток
     stop_event = threading.Event()
     thread = threading.Thread(
         target=camera_processing,
-        args=(data['id'], camera['url'], stop_event))
+        args=(data['id'], camera['url'], stop_event),
+        daemon=True  # Поток завершится при выходе основного
+    )
     thread.start()
 
-    # Wait a bit for the camera to initialize
-    time.sleep(1)
+    time.sleep(2)
 
-    if data['id'] in camera_instances:
+    # Проверяем, что камера реально запустилась
+    if data['id'] in camera_instances and camera_instances[data['id']]['cap'].isOpened():
         config['current_camera'] = data['id']
         save_config(config)
         return jsonify({'status': 'success', 'camera': camera})
     else:
         return jsonify({'status': 'error', 'message': 'Failed to start camera processing'}), 500
-
 
 @app.route('/api/disconnect', methods=['POST'])
 @admin_required
@@ -1025,6 +1224,362 @@ def check_auth():
     allowed_routes = ['login', 'register', 'static']
     if request.endpoint not in allowed_routes and 'user_id' not in session:
         return redirect(url_for('login'))
+
+@app.route('/api/plates/filter')
+@login_required
+def get_filtered_plates():
+    """Возвращает отфильтрованные номера по заданным критериям"""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    plate_number = request.args.get('plate_number')
+    camera_id = request.args.get('camera_id')
+    confidence = request.args.get('confidence', type=float)
+
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+
+    query = """
+        SELECT id, plate_text, camera_id, camera_name, score, 
+               datetime(timestamp, 'localtime') as local_timestamp 
+        FROM recognized_plates 
+        WHERE 1=1
+    """
+    params = []
+
+    if start_date:
+        query += " AND timestamp >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND timestamp <= ?"
+        params.append(end_date)
+    if plate_number:
+        query += " AND plate_text LIKE ?"
+        params.append(f'%{plate_number}%')
+    if camera_id:
+        query += " AND camera_id = ?"
+        params.append(camera_id)
+    if confidence:
+        query += " AND score >= ?"
+        params.append(confidence)
+
+    query += " ORDER BY timestamp DESC LIMIT 1000"
+
+    c.execute(query, params)
+    plates = []
+    for row in c.fetchall():
+        plates.append({
+            'id': row[0],
+            'text': row[1],
+            'camera_id': row[2],
+            'camera_name': row[3],
+            'score': row[4],
+            'timestamp': row[5]
+        })
+    conn.close()
+    return jsonify({'plates': plates})
+
+
+@app.route('/api/plates/export')
+@login_required
+def export_plates():
+    """Экспортирует отфильтрованные номера в Excel"""
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    plate_number = request.args.get('plate_number')
+    camera_id = request.args.get('camera_id')
+    confidence = request.args.get('confidence', type=float)
+
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+
+    query = """
+        SELECT plate_text, camera_name, score, 
+               datetime(timestamp, 'localtime') as local_timestamp 
+        FROM recognized_plates 
+        WHERE 1=1
+    """
+    params = []
+
+    if start_date:
+        query += " AND timestamp >= ?"
+        params.append(start_date)
+    if end_date:
+        query += " AND timestamp <= ?"
+        params.append(end_date)
+    if plate_number:
+        query += " AND plate_text LIKE ?"
+        params.append(f'%{plate_number}%')
+    if camera_id:
+        query += " AND camera_id = ?"
+        params.append(camera_id)
+    if confidence:
+        query += " AND score >= ?"
+        params.append(confidence)
+
+    query += " ORDER BY timestamp DESC"
+
+    c.execute(query, params)
+    plates = c.fetchall()
+    conn.close()
+
+    # Создаем Excel файл
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet()
+
+    # Форматирование
+    header_format = workbook.add_format({
+        'bold': True,
+        'bg_color': '#D9D9D9',
+        'border': 1
+    })
+    cell_format = workbook.add_format({
+        'border': 1
+    })
+
+    # Заголовки
+    headers = ['Номер', 'Камера', 'Уверенность', 'Дата и время']
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_format)
+
+    # Данные
+    for row, plate in enumerate(plates, start=1):
+        worksheet.write(row, 0, plate[0], cell_format)  # Номер
+        worksheet.write(row, 1, plate[1], cell_format)  # Камера
+        worksheet.write(row, 2, f"{plate[2]*100:.1f}%", cell_format)  # Уверенность
+        worksheet.write(row, 3, plate[3], cell_format)  # Дата и время
+
+    # Автоматическая ширина столбцов
+    for col in range(len(headers)):
+        worksheet.set_column(col, col, 15)
+
+    workbook.close()
+    output.seek(0)
+
+    # Генерируем имя файла
+    filename = f"plates_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=filename
+    )
+
+
+@app.route('/api/plates/delete', methods=['POST'])
+@admin_required
+def delete_plates():
+    """Удаляет записи до указанной даты"""
+    data = request.json
+    before_date = data.get('before_date')
+
+    if not before_date:
+        return jsonify({'status': 'error', 'message': 'Не указана дата'}), 400
+
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+
+    # Сначала получаем количество записей для удаления
+    c.execute("SELECT COUNT(*) FROM recognized_plates WHERE timestamp < ?", (before_date,))
+    count = c.fetchone()[0]
+
+    # Удаляем записи
+    c.execute("DELETE FROM recognized_plates WHERE timestamp < ?", (before_date,))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'status': 'success',
+        'message': f'Удалено {count} записей',
+        'deleted_count': count
+    })
+
+
+@app.route('/api/settings/reset', methods=['POST'])
+@admin_required
+def reset_settings():
+    global config
+    config = DEFAULT_CONFIG.copy()
+    save_config(config)
+    return jsonify({'status': 'success'})
+
+
+@app.route('/api/data/cleanup', methods=['POST'])
+@admin_required
+def cleanup_data():
+    try:
+        before_date = request.json.get('before_date')
+        max_age = request.json.get('max_age')
+
+        conn = sqlite3.connect('plates.db')
+        c = conn.cursor()
+
+        conditions = []
+        params = []
+
+        if before_date:
+            conditions.append("timestamp < ?")
+            params.append(before_date)
+
+        if max_age:
+            try:
+                max_age_int = int(max_age)
+                cutoff_date = (datetime.now() - timedelta(days=max_age_int)).strftime('%Y-%m-%d %H:%M:%S')
+                conditions.append("timestamp < ?")
+                params.append(cutoff_date)
+            except ValueError:
+                return jsonify({'status': 'error', 'message': 'Invalid max_age value'}), 400
+
+        if not conditions:
+            return jsonify({'status': 'error', 'message': 'No cleanup criteria provided'}), 400
+
+        # First count records to be deleted
+        count_query = f"SELECT COUNT(*) FROM recognized_plates WHERE {' OR '.join(conditions)}"
+        c.execute(count_query, params)
+        count = c.fetchone()[0]
+
+        # Then delete them
+        delete_query = f"DELETE FROM recognized_plates WHERE {' OR '.join(conditions)}"
+        c.execute(delete_query, params)
+
+        # Also delete images if they exist in the filesystem
+        if config.get('save_images', True):
+            # Get IDs of deleted records to delete their images
+            c.execute(f"SELECT id FROM recognized_plates WHERE {' OR '.join(conditions)}", params)
+            deleted_ids = [row[0] for row in c.fetchall()]
+
+            for plate_id in deleted_ids:
+                image_path = os.path.join(SNAPSHOTS_DIR, f'plate_{plate_id}.jpg')
+                if os.path.exists(image_path):
+                    try:
+                        os.remove(image_path)
+                    except Exception as e:
+                        logging.error(f"Error deleting image {image_path}: {e}")
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'status': 'success',
+            'deleted_count': count
+        })
+
+    except Exception as e:
+        logging.error(f"Error in cleanup_data: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': f"Internal server error: {str(e)}"
+        }), 500
+
+@app.route('/api/stats')
+@login_required
+def get_system_stats():
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+
+    # Total records
+    c.execute("SELECT COUNT(*) FROM recognized_plates")
+    total_records = c.fetchone()[0]
+
+    # Total images (only if saving images is enabled)
+    if config.get('save_images', True):
+        c.execute("SELECT COUNT(*) FROM recognized_plates WHERE image IS NOT NULL")
+        total_images = c.fetchone()[0]
+    else:
+        total_images = 0
+
+    # Database size
+    db_size = os.path.getsize('plates.db') / (1024 * 1024)  # in MB
+
+    conn.close()
+
+    return jsonify({
+        'total_records': total_records,
+        'total_images': total_images,
+        'db_size': round(db_size, 2)
+    })
+
+@app.route('/api/stats/hourly')
+@login_required
+def get_hourly_stats():
+    """Возвращает статистику по часам за последние 24 часа"""
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+    
+    # Получаем данные по часам
+    c.execute("""
+        SELECT strftime('%H', timestamp) as hour, COUNT(*) as count
+        FROM recognized_plates
+        WHERE timestamp >= datetime('now', '-24 hours')
+        GROUP BY hour
+        ORDER BY hour
+    """)
+    
+    # Создаем массив для всех часов
+    hourly_data = [0] * 24
+    for row in c.fetchall():
+        hour = int(row[0])
+        count = row[1]
+        hourly_data[hour] = count
+    
+    conn.close()
+    return jsonify({'hourly_data': hourly_data})
+
+@app.route('/api/stats/cameras')
+@login_required
+def get_camera_stats():
+    """Возвращает статистику по камерам"""
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+    
+    # Получаем данные по камерам
+    c.execute("""
+        SELECT camera_name, COUNT(*) as count, AVG(score) as avg_score
+        FROM recognized_plates
+        WHERE timestamp >= datetime('now', '-24 hours')
+        GROUP BY camera_name
+        ORDER BY count DESC
+    """)
+    
+    cameras = []
+    for row in c.fetchall():
+        cameras.append({
+            'name': row[0],
+            'count': row[1],
+            'avg_score': round(row[2] * 100, 1)
+        })
+    
+    conn.close()
+    return jsonify({'cameras': cameras})
+
+@app.route('/api/stats/top_plates')
+@login_required
+def get_top_plates():
+    """Возвращает топ часто встречающихся номеров"""
+    conn = sqlite3.connect('plates.db')
+    c = conn.cursor()
+    
+    # Получаем топ номеров
+    c.execute("""
+        SELECT plate_text, COUNT(*) as count
+        FROM recognized_plates
+        WHERE timestamp >= datetime('now', '-24 hours')
+        GROUP BY plate_text
+        HAVING count > 1
+        ORDER BY count DESC
+        LIMIT 10
+    """)
+    
+    top_plates = []
+    for row in c.fetchall():
+        top_plates.append({
+            'plate': row[0],
+            'count': row[1]
+        })
+    
+    conn.close()
+    return jsonify({'top_plates': top_plates})
 
 if __name__ == '__main__':
     # Инициализация базы данных

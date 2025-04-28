@@ -236,7 +236,7 @@
         <div class="register-body">
             <div class="logo">
                 <i class="fas fa-user-plus"></i>
-                <h2>Создание учетной записи</h2>
+                <h2>Создание нового пользователя</h2>
             </div>
 
             {% with messages = get_flashed_messages() %}
@@ -265,12 +265,6 @@
                         <input type="password" id="password" name="password" class="form-control" placeholder="Придумайте пароль" required>
                         <i class="fas fa-lock input-group-icon"></i>
                     </div>
-                    <div class="password-strength">
-                        <div class="password-strength-bar" id="password_strength"></div>
-                    </div>
-                    <div class="password-hint">
-                        Пароль должен содержать не менее 8 символов, включая цифры и буквы
-                    </div>
                 </div>
 
                 <div class="form-group">
@@ -281,18 +275,22 @@
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-user-plus"></i> Зарегистрироваться
-                </button>
-
-                <div class="terms">
-                    Нажимая кнопку, вы соглашаетесь с <a href="#">условиями использования</a> и <a href="#">политикой конфиденциальности</a>
+                <div class="form-group">
+                    <label for="role" class="form-label">Роль</label>
+                    <select id="role" name="role" class="form-control">
+                        <option value="user">Пользователь</option>
+                        <option value="admin">Администратор</option>
+                    </select>
                 </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Создать пользователя
+                </button>
             </form>
         </div>
 
         <div class="register-footer">
-            Уже есть учетная запись? <a href="{{ url_for('login') }}">Войти</a>
+            <a href="{{ url_for('user_management') }}">Вернуться к управлению пользователями</a>
         </div>
     </div>
 
