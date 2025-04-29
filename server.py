@@ -592,20 +592,24 @@ def camera_processing(camera_id, camera_url, stop_event):
     try:
         logging.info(f"Инициализация обработки камеры {camera_id} ({camera_url})")
 
-        # Параметры для стабильного подключения (совместимая версия)
-        cap = cv2.VideoCapture(camera_url)
+        # Удаляем параметры из URL для MJPEG потока
+        clean_url = camera_url.split('?')[0] if '?' in camera_url else camera_url
+        logging.info(f"Очищенный URL камеры: {clean_url}")
 
-        # Пытаемся установить параметры, если они доступны
+        # Параметры для стабильного подключения
+        cap = cv2.VideoCapture(clean_url)
+
+        # Устанавливаем параметры для стабильной работы
         try:
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)  # Увеличиваем размер буфера
             cap.set(cv2.CAP_PROP_FPS, 15)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 960)  # Устанавливаем разрешение из URL
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
         except AttributeError as e:
             logging.warning(f"Некоторые свойства камеры недоступны: {str(e)}")
 
-        # Альтернативный способ установки таймаута
-        timeout = 10  # секунд
+        # Увеличиваем таймаут подключения
+        timeout = 30  # секунд
         start_time = time.time()
 
         while not cap.isOpened():
@@ -616,7 +620,17 @@ def camera_processing(camera_id, camera_url, stop_event):
                     'last_error': 'Timeout при подключении'
                 })
                 return
-            time.sleep(0.2)
+            time.sleep(0.5)
+
+        # Проверяем, что камера действительно подключена
+        ret, frame = cap.read()
+        if not ret:
+            logging.error(f"Не удалось получить кадр от камеры {camera_id}")
+            camera_states[camera_id].update({
+                'connected': False,
+                'last_error': 'Не удалось получить кадр'
+            })
+            return
 
         # Успешное подключение
         camera_states[camera_id].update({
@@ -625,7 +639,7 @@ def camera_processing(camera_id, camera_url, stop_event):
             'error_count': 0
         })
 
-        frame_queue = queue.Queue(maxsize=3)  # Ограничение очереди
+        frame_queue = queue.Queue(maxsize=5)  # Увеличиваем размер очереди
 
         # Сохраняем экземпляр камеры
         camera_instances[camera_id] = {
@@ -658,7 +672,7 @@ def camera_processing(camera_id, camera_url, stop_event):
                     if camera_states[camera_id]['error_count'] > 5:
                         logging.warning(f"Переподключение камеры {camera_id}...")
                         cap.release()
-                        cap = cv2.VideoCapture(camera_url)
+                        cap = cv2.VideoCapture(clean_url)
                         if not cap.isOpened():
                             raise ConnectionError(f"Не удалось переподключиться к камере {camera_id}")
                         camera_instances[camera_id]['cap'] = cap
@@ -693,7 +707,7 @@ def camera_processing(camera_id, camera_url, stop_event):
                                 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                                 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                             except:
-                                width, height = 640, 480
+                                width, height = 960, 720
 
                             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                             filename = f"recording_{camera_id}_{timestamp}.avi"
@@ -1083,8 +1097,31 @@ def get_cameras_status():
 @app.route('/api/camera_status/<int:camera_id>')
 @login_required
 def get_camera_status(camera_id):
-    """Возвращает текущий статус камеры (доступно всем авторизованным пользователям)"""
+    """Возвращает текущий статус камеры"""
     status = camera_states.get(camera_id, {'connected': False})
+    
+    # Проверяем реальное состояние камеры
+    if camera_id in camera_instances:
+        instance = camera_instances[camera_id]
+        if 'cap' in instance:
+            # Проверяем, открыта ли камера и получаем кадр
+            if instance['cap'].isOpened():
+                ret, _ = instance['cap'].read()
+                if ret:
+                    status['connected'] = True
+                    status['last_activity'] = datetime.now().isoformat()
+                else:
+                    status['connected'] = False
+                    status['last_error'] = 'Не удалось получить кадр'
+            else:
+                status['connected'] = False
+                status['last_error'] = 'Камера не открыта'
+        else:
+            status['connected'] = False
+            status['last_error'] = 'Экземпляр камеры не инициализирован'
+    else:
+        status['connected'] = False
+        status['last_error'] = 'Камера не найдена в списке активных'
 
     # Добавляем дополнительную информацию для администраторов
     if session.get('role') == 'admin':
@@ -1148,6 +1185,7 @@ def connect_camera():
         return jsonify({'status': 'success', 'camera': camera})
     else:
         return jsonify({'status': 'error', 'message': 'Failed to start camera processing'}), 500
+
 
 @app.route('/api/disconnect', methods=['POST'])
 @admin_required

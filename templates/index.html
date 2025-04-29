@@ -315,9 +315,15 @@
         }
 
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
         }
 
         .status-text {
@@ -681,8 +687,12 @@
 
         /* Animation for new plate */
         @keyframes highlight {
-            0% { background-color: rgba(46, 204, 113, 0.3); }
-            100% { background-color: var(--white); }
+            0% {
+                background-color: rgba(46, 204, 113, 0.3);
+            }
+            100% {
+                background-color: var(--white);
+            }
         }
 
         .new-plate {
@@ -700,7 +710,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .loading-container {
@@ -812,7 +824,7 @@
         .settings-card {
             background: var(--white);
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             overflow: hidden;
         }
 
@@ -966,862 +978,963 @@
                 width: 100%;
             }
         }
+
+        .camera-card-simple {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            transition: var(--transition);
+            background-color: var(--white);
+        }
+
+        .camera-card-simple:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .camera-header-simple {
+            padding: 12px 15px;
+            background-color: var(--primary);
+            color: var(--white);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .camera-name-simple {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .camera-status-simple {
+            padding: 10px 15px;
+            background-color: #f8f9fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid #eee;
+        }
+
+        .status-info-simple {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator-simple {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--gray);
+        }
+
+        .status-indicator-simple.connected {
+            background-color: var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-indicator-simple.disconnected {
+            background-color: var(--danger);
+        }
+
+        .status-text-simple {
+            font-size: 0.9rem;
+        }
+
+        .camera-placeholder {
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #000;
+            color: var(--white);
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .admin-controls {
+            display: none;
+        }
+
+        .admin-only {
+            display: none;
+        }
+
+        body.admin .admin-only {
+            display: block;
+        }
+
+        body.admin .admin-controls {
+            display: flex;
+        }
     </style>
 </head>
 <body>
-    <div class="app-container">
-        <header class="header">
-            <div class="logo">
-                <i class="fas fa-car-alt"></i>
-                <span>ЗАО "Муром" - Учет машин на КПП</span>
-            </div>
-            <div class="user-panel">
-                {% if user %}
-                    <div class="user-info">
-                        <div class="user-avatar">{{ user[0]|upper }}</div>
-                        <div>
-                            <div class="user-name">{{ user }}</div>
-                            <div class="user-role">{{ role }}</div>
-                        </div>
-                    </div>
-                    <a href="{{ url_for('logout') }}" class="auth-link">
-                        <i class="fas fa-sign-out-alt"></i> Выйти
-                    </a>
-                {% else %}
-                    <div class="auth-links">
-                        <a href="{{ url_for('login') }}" class="auth-link">
-                            <i class="fas fa-sign-in-alt"></i> Войти
-                        </a>
-                        <a href="{{ url_for('register') }}" class="auth-link">
-                            <i class="fas fa-user-plus"></i> Регистрация
-                        </a>
-                    </div>
-                {% endif %}
-            </div>
-        </header>
-
-        <aside class="sidebar">
-            <ul class="sidebar-menu">
-                <li class="menu-item">
-                    <a href="#" class="menu-link active" data-section="monitoring">
-                        <i class="fas fa-tv"></i>
-                        <span>Мониторинг камер</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" data-section="plates">
-                        <i class="fas fa-car"></i>
-                        <span>Распознанные номера</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-only">
-                    <a href="#" class="menu-link" data-section="settings">
-                        <i class="fas fa-cog"></i>
-                        <span>Настройки системы</span>
-                    </a>
-                </li>
-                <li class="menu-item admin-only">
-                    <a href="#" class="menu-link" data-section="users">
-                        <i class="fas fa-users"></i>
-                        <span>Управление пользователями</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" data-section="stats">
-                        <i class="fas fa-chart-line"></i>
-                        <span>Статистика</span>
-                    </a>
-                </li>
-                <li class="menu-item">
-                    <a href="#" class="menu-link" data-section="history">
-                        <i class="fas fa-history"></i>
-                        <span>История событий</span>
-                    </a>
-                </li>
-            </ul>
-        </aside>
-
-        <main class="main-content">
-            <!-- Секция мониторинга -->
-            <div id="monitoring-section" class="content-section">
-                <div class="page-header">
-                    <h1 class="page-title">
-                        <i class="fas fa-tv"></i> Мониторинг камер
-                    </h1>
-                    <div class="page-actions">
-                        <button class="btn btn-primary admin-only" id="add_camera_btn" style="display: none;">
-                            <i class="fas fa-plus"></i> Добавить камеру
-                        </button>
-                        <button class="btn btn-info" id="refresh_btn">
-                            <i class="fas fa-sync-alt"></i> Обновить
-                        </button>
-                    </div>
-                </div>
-
-                <div class="cameras-grid" id="cameras_container">
-                    <!-- Камеры будут добавляться динамически -->
-                    <div class="loading-container">
-                        <div class="spinner"></div>
-                    </div>
+<div class="app-container">
+    <header class="header">
+        <div class="logo">
+            <i class="fas fa-car-alt"></i>
+            <span>ЗАО "Муром" - Учет машин на КПП</span>
+        </div>
+        <div class="user-panel">
+            {% if user %}
+            <div class="user-info">
+                <div class="user-avatar">{{ user[0]|upper }}</div>
+                <div>
+                    <div class="user-name">{{ user }}</div>
+                    <div class="user-role">{{ role }}</div>
                 </div>
             </div>
-
-            <!-- Секция распознанных номеров -->
-            <div id="plates-section" class="content-section" style="display: none;">
-                <div class="page-header">
-                    <h1 class="page-title">
-                        <i class="fas fa-car"></i> Распознанные номера
-                    </h1>
-                    <div class="page-actions">
-                        <button class="btn btn-light" id="filter_plates_btn">
-                            <i class="fas fa-filter"></i> Фильтр
-                        </button>
-                        <button class="btn btn-light" id="export_excel_btn">
-                            <i class="fas fa-download"></i> Экспорт
-                        </button>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-body">
-                        <div class="plates-list" id="plates_list">
-                            <!-- Номера будут добавляться динамически -->
-                            <div class="loading-container">
-                                <div class="spinner"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-footer">
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle"></i>
-                            За последние 24 часа распознано <strong id="plates_count">0</strong> номерных знаков
-                        </div>
-                    </div>
-                </div>
+            <a href="{{ url_for('logout') }}" class="auth-link">
+                <i class="fas fa-sign-out-alt"></i> Выйти
+            </a>
+            {% else %}
+            <div class="auth-links">
+                <a href="{{ url_for('login') }}" class="auth-link">
+                    <i class="fas fa-sign-in-alt"></i> Войти
+                </a>
+                <a href="{{ url_for('register') }}" class="auth-link">
+                    <i class="fas fa-user-plus"></i> Регистрация
+                </a>
             </div>
+            {% endif %}
+        </div>
+    </header>
 
-            <!-- Секция управления пользователями -->
-            <div id="users-section" class="content-section" style="display: none;">
-                <div class="page-header">
-                    <h1 class="page-title">
-                        <i class="fas fa-users"></i> Управление пользователями
-                    </h1>
-                    <div class="page-actions">
-                        <button class="btn btn-primary" id="add_user_btn">
-                            <i class="fas fa-user-plus"></i> Добавить пользователя
-                        </button>
-                    </div>
-                </div>
-                <div class="users-list" id="users_list">
-                    <!-- Список пользователей будет добавлен динамически -->
-                </div>
-            </div>
+    <aside class="sidebar">
+        <ul class="sidebar-menu">
+            <li class="menu-item">
+                <a href="#" class="menu-link active" data-section="monitoring">
+                    <i class="fas fa-tv"></i>
+                    <span>Мониторинг камер</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link" data-section="plates">
+                    <i class="fas fa-car"></i>
+                    <span>Распознанные номера</span>
+                </a>
+            </li>
+            <li class="menu-item admin-only">
+                <a href="#" class="menu-link" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Настройки системы</span>
+                </a>
+            </li>
+            <li class="menu-item admin-only">
+                <a href="#" class="menu-link" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span>Управление пользователями</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link" data-section="stats">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Статистика</span>
+                </a>
+            </li>
+            <li class="menu-item">
+                <a href="#" class="menu-link" data-section="history">
+                    <i class="fas fa-history"></i>
+                    <span>История событий</span>
+                </a>
+            </li>
+        </ul>
+    </aside>
 
-            <!-- Секция настроек системы -->
-            <div id="settings-section" class="content-section" style="display: none;">
-                <div class="page-header">
-                    <h1 class="page-title">
-                        <i class="fas fa-cog"></i> Настройки системы
-                    </h1>
-                </div>
-
-                <div class="settings-grid">
-                    <!-- Карточка основных настроек -->
-                    <div class="settings-card">
-                        <div class="settings-card-header">
-                            <i class="fas fa-sliders-h"></i>
-                            <h2>Основные настройки</h2>
-                        </div>
-                        <div class="settings-card-body">
-                            <div class="form-group">
-                                <label for="threshold-setting" class="form-label">
-                                    <i class="fas fa-chart-line"></i>
-                                    Порог уверенности
-                                </label>
-                                <div class="input-group">
-                                    <input type="range" id="threshold-setting" class="form-range" min="0.1" max="0.99" step="0.01" value="{{ config.threshold }}">
-                                    <span class="input-group-text threshold-value">{{ config.threshold }}</span>
-                                </div>
-                                <small class="form-text">Чем выше значение, тем строже распознавание</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="region-setting" class="form-label">
-                                    <i class="fas fa-globe"></i>
-                                    Регион номеров
-                                </label>
-                                <select id="region-setting" class="form-select">
-                                    <option value="ru">Россия</option>
-                                    <option value="kz">Казахстан</option>
-                                    <option value="by">Беларусь</option>
-                                    <option value="eu">Европейский формат</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Карточка дополнительных параметров -->
-                    <div class="settings-card">
-                        <div class="settings-card-header">
-                            <i class="fas fa-tools"></i>
-                            <h2>Дополнительные параметры</h2>
-                        </div>
-                        <div class="settings-card-body">
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" id="enable_alpr-setting" class="form-check-input" checked>
-                                    <label for="enable_alpr-setting" class="form-check-label">
-                                        <i class="fas fa-robot"></i>
-                                        Автоматическое распознавание
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" id="save_images-setting" class="form-check-input" checked>
-                                    <label for="save_images-setting" class="form-check-label">
-                                        <i class="fas fa-camera"></i>
-                                        Сохранение изображений
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <div class="form-check form-switch">
-                                    <input type="checkbox" id="email_notifications-setting" class="form-check-input">
-                                    <label for="email_notifications-setting" class="form-check-label">
-                                        <i class="fas fa-envelope"></i>
-                                        Email уведомления
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Карточка управления данными -->
-                    <div class="settings-card admin-only">
-                        <div class="settings-card-header">
-                            <i class="fas fa-database"></i>
-                            <h2>Управление данными</h2>
-                        </div>
-                        <div class="settings-card-body">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <div class="alert-content">
-                                    <h4>Внимание!</h4>
-                                    <p>Действия в этом разделе нельзя отменить. Будьте осторожны!</p>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="delete_before_date-setting" class="form-label">
-                                    <i class="fas fa-calendar-times"></i>
-                                    Удалить записи до
-                                </label>
-                                <input type="datetime-local" id="delete_before_date-setting" class="form-control">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="max_age-setting" class="form-label">
-                                    <i class="fas fa-clock"></i>
-                                    Максимальный возраст записей (дней)
-                                </label>
-                                <input type="number" id="max_age-setting" class="form-control" min="1" max="365" value="30">
-                            </div>
-
-                            <button class="btn btn-danger w-100" id="confirm_delete_data_btn">
-                                <i class="fas fa-trash"></i>
-                                Удалить записи
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Карточка статистики -->
-                    <div class="settings-card">
-                        <div class="settings-card-header">
-                            <i class="fas fa-chart-pie"></i>
-                            <h2>Статистика</h2>
-                        </div>
-                        <div class="settings-card-body">
-                            <div class="stats-grid">
-                                <div class="stat-item">
-                                    <i class="fas fa-hdd"></i>
-                                    <div class="stat-info">
-                                        <span class="stat-value" id="total_records">0</span>
-                                        <span class="stat-label">Всего записей</span>
-                                    </div>
-                                </div>
-                                <div class="stat-item">
-                                    <i class="fas fa-folder"></i>
-                                    <div class="stat-info">
-                                        <span class="stat-value" id="total_images">0</span>
-                                        <span class="stat-label">Изображений</span>
-                                    </div>
-                                </div>
-                                <div class="stat-item">
-                                    <i class="fas fa-database"></i>
-                                    <div class="stat-info">
-                                        <span class="stat-value" id="db_size">0 MB</span>
-                                        <span class="stat-label">Размер БД</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-actions">
-                    <button class="btn btn-primary" id="save_settings_btn">
-                        <i class="fas fa-save"></i>
-                        Сохранить настройки
+    <main class="main-content">
+        <!-- Секция мониторинга -->
+        <div id="monitoring-section" class="content-section">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-tv"></i> Мониторинг камер
+                </h1>
+                <div class="page-actions">
+                    <button class="btn btn-primary admin-only" id="add_camera_btn" style="display: none;">
+                        <i class="fas fa-plus"></i> Добавить камеру
                     </button>
-                    <button class="btn btn-secondary" id="reset_settings_btn">
-                        <i class="fas fa-undo"></i>
-                        Сбросить настройки
+                    <button class="btn btn-info" id="refresh_btn">
+                        <i class="fas fa-sync-alt"></i> Обновить
                     </button>
                 </div>
             </div>
 
-            <!-- Модальное окно для добавления/редактирования пользователя -->
-            <div class="modal" id="userModal">
-                <div class="modal-dialog">
-                    <div class="modal-header">
-                        <h3 class="modal-title" id="userModalTitle">Добавить пользователя</h3>
-                        <button class="modal-close">&times;</button>
+            <div class="cameras-grid" id="cameras_container">
+                <!-- Камеры будут добавляться динамически -->
+                <div class="loading-container">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Секция распознанных номеров -->
+        <div id="plates-section" class="content-section" style="display: none;">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-car"></i> Распознанные номера
+                </h1>
+                <div class="page-actions">
+                    <button class="btn btn-light" id="filter_plates_btn">
+                        <i class="fas fa-filter"></i> Фильтр
+                    </button>
+                    <button class="btn btn-light" id="export_excel_btn">
+                        <i class="fas fa-download"></i> Экспорт
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="plates-list" id="plates_list">
+                        <!-- Номера будут добавляться динамически -->
+                        <div class="loading-container">
+                            <div class="spinner"></div>
+                        </div>
                     </div>
-                    <div class="modal-body">
+                </div>
+                <div class="card-footer">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        За последние 24 часа распознано <strong id="plates_count">0</strong> номерных знаков
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Секция управления пользователями -->
+        <div id="users-section" class="content-section" style="display: none;">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-users"></i> Управление пользователями
+                </h1>
+                <div class="page-actions">
+                    <button class="btn btn-primary" id="add_user_btn">
+                        <i class="fas fa-user-plus"></i> Добавить пользователя
+                    </button>
+                </div>
+            </div>
+            <div class="users-list" id="users_list">
+                <!-- Список пользователей будет добавлен динамически -->
+            </div>
+        </div>
+
+        <!-- Секция настроек системы -->
+        <div id="settings-section" class="content-section" style="display: none;">
+            <div class="page-header">
+                <h1 class="page-title">
+                    <i class="fas fa-cog"></i> Настройки системы
+                </h1>
+            </div>
+
+            <div class="settings-grid">
+                <!-- Карточка основных настроек -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <i class="fas fa-sliders-h"></i>
+                        <h2>Основные настройки</h2>
+                    </div>
+                    <div class="settings-card-body">
                         <div class="form-group">
-                            <label for="modal_username" class="form-label">Имя пользователя</label>
-                            <input type="text" id="modal_username" class="form-control">
+                            <label for="threshold-setting" class="form-label">
+                                <i class="fas fa-chart-line"></i>
+                                Порог уверенности
+                            </label>
+                            <div class="input-group">
+                                <input type="range" id="threshold-setting" class="form-range" min="0.1" max="0.99"
+                                       step="0.01" value="{{ config.threshold }}">
+                                <span class="input-group-text threshold-value">{{ config.threshold }}</span>
+                            </div>
+                            <small class="form-text">Чем выше значение, тем строже распознавание</small>
                         </div>
+
                         <div class="form-group">
-                            <label for="modal_password" class="form-label">Пароль</label>
-                            <input type="password" id="modal_password" class="form-control">
-                        </div>
-                        <div class="form-group">
-                            <label for="modal_role" class="form-label">Роль</label>
-                            <select id="modal_role" class="form-control">
-                                <option value="user">Пользователь</option>
-                                <option value="admin">Администратор</option>
+                            <label for="region-setting" class="form-label">
+                                <i class="fas fa-globe"></i>
+                                Регион номеров
+                            </label>
+                            <select id="region-setting" class="form-select">
+                                <option value="ru">Россия</option>
+                                <option value="kz">Казахстан</option>
+                                <option value="by">Беларусь</option>
+                                <option value="eu">Европейский формат</option>
                             </select>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-light" id="cancel_user_btn">Отмена</button>
-                        <button class="btn btn-primary" id="save_user_btn">Сохранить</button>
+                </div>
+
+                <!-- Карточка дополнительных параметров -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <i class="fas fa-tools"></i>
+                        <h2>Дополнительные параметры</h2>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="form-group">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" id="enable_alpr-setting" class="form-check-input" checked>
+                                <label for="enable_alpr-setting" class="form-check-label">
+                                    <i class="fas fa-robot"></i>
+                                    Автоматическое распознавание
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" id="save_images-setting" class="form-check-input" checked>
+                                <label for="save_images-setting" class="form-check-label">
+                                    <i class="fas fa-camera"></i>
+                                    Сохранение изображений
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check form-switch">
+                                <input type="checkbox" id="email_notifications-setting" class="form-check-input">
+                                <label for="email_notifications-setting" class="form-check-label">
+                                    <i class="fas fa-envelope"></i>
+                                    Email уведомления
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Карточка управления данными -->
+                <div class="settings-card admin-only">
+                    <div class="settings-card-header">
+                        <i class="fas fa-database"></i>
+                        <h2>Управление данными</h2>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <div class="alert-content">
+                                <h4>Внимание!</h4>
+                                <p>Действия в этом разделе нельзя отменить. Будьте осторожны!</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="delete_before_date-setting" class="form-label">
+                                <i class="fas fa-calendar-times"></i>
+                                Удалить записи до
+                            </label>
+                            <input type="datetime-local" id="delete_before_date-setting" class="form-control">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="max_age-setting" class="form-label">
+                                <i class="fas fa-clock"></i>
+                                Максимальный возраст записей (дней)
+                            </label>
+                            <input type="number" id="max_age-setting" class="form-control" min="1" max="365" value="30">
+                        </div>
+
+                        <button class="btn btn-danger w-100" id="confirm_delete_data_btn">
+                            <i class="fas fa-trash"></i>
+                            Удалить записи
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Карточка статистики -->
+                <div class="settings-card">
+                    <div class="settings-card-header">
+                        <i class="fas fa-chart-pie"></i>
+                        <h2>Статистика</h2>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <i class="fas fa-hdd"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="total_records">0</span>
+                                    <span class="stat-label">Всего записей</span>
+                                </div>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-folder"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="total_images">0</span>
+                                    <span class="stat-label">Изображений</span>
+                                </div>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fas fa-database"></i>
+                                <div class="stat-info">
+                                    <span class="stat-value" id="db_size">0 MB</span>
+                                    <span class="stat-label">Размер БД</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Modal для просмотра изображения номера -->
-            <div class="modal" id="plateImageModal">
-                <div class="modal-dialog" style="max-width: 800px;">
-                    <div class="modal-header">
-                        <h3 class="modal-title">Просмотр номера</h3>
-                        <button class="modal-close">&times;</button>
-                    </div>
-                    <div class="modal-body" style="text-align: center;">
-                        <img id="plateImage" src="" style="max-width: 100%; max-height: 70vh;">
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-light" id="closePlateImageBtn">Закрыть</button>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Modal для добавления камеры -->
-    <div class="modal" id="addCameraModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h3 class="modal-title">Добавить новую камеру</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="camera_name_input" class="form-label">Название камеры</label>
-                    <input type="text" id="camera_name_input" class="form-control" placeholder="Например: Въезд на территорию">
-                </div>
-                <div class="form-group">
-                    <label for="camera_url_input" class="form-label">URL потока</label>
-                    <input type="text" id="camera_url_input" class="form-control" placeholder="Например: rtsp://192.168.1.100:554/stream">
-                    <small class="form-text">Поддерживаются RTSP, HTTP и MJPEG потоки</small>
-                </div>
-                <div class="form-group">
-                    <label for="camera_location_input" class="form-label">Местоположение</label>
-                    <input type="text" id="camera_location_input" class="form-control" placeholder="Например: КПП №1, главный въезд">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-light" id="cancel_camera_btn">Отмена</button>
-                <button class="btn btn-primary" id="save_camera_btn">
-                    <i class="fas fa-save"></i> Сохранить камеру
+            <div class="settings-actions">
+                <button class="btn btn-primary" id="save_settings_btn">
+                    <i class="fas fa-save"></i>
+                    Сохранить настройки
+                </button>
+                <button class="btn btn-secondary" id="reset_settings_btn">
+                    <i class="fas fa-undo"></i>
+                    Сбросить настройки
                 </button>
             </div>
         </div>
-    </div>
 
-    <!-- Modal для фильтрации и экспорта номеров -->
-    <div class="modal" id="platesFilterModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h3 class="modal-title">Фильтр и экспорт номеров</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="start_date_filter" class="form-label">Начальная дата</label>
-                    <input type="datetime-local" id="start_date_filter" class="form-control">
+        <!-- Модальное окно для добавления/редактирования пользователя -->
+        <div class="modal" id="userModal">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="userModalTitle">Добавить пользователя</h3>
+                    <button class="modal-close">&times;</button>
                 </div>
-                <div class="form-group">
-                    <label for="end_date_filter" class="form-label">Конечная дата</label>
-                    <input type="datetime-local" id="end_date_filter" class="form-control">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="modal_username" class="form-label">Имя пользователя</label>
+                        <input type="text" id="modal_username" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal_password" class="form-label">Пароль</label>
+                        <input type="password" id="modal_password" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal_role" class="form-label">Роль</label>
+                        <select id="modal_role" class="form-control">
+                            <option value="user">Пользователь</option>
+                            <option value="admin">Администратор</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="plate_number_filter" class="form-label">Номер (частичный ввод)</label>
-                    <input type="text" id="plate_number_filter" class="form-control" placeholder="Например: А123">
+                <div class="modal-footer">
+                    <button class="btn btn-light" id="cancel_user_btn">Отмена</button>
+                    <button class="btn btn-primary" id="save_user_btn">Сохранить</button>
                 </div>
-                <div class="form-group">
-                    <label for="camera_filter" class="form-label">Камера</label>
-                    <select id="camera_filter" class="form-control">
-                        <option value="">Все камеры</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="confidence_filter" class="form-label">Уверенность распознавания</label>
-                    <input type="range" id="confidence_filter" class="form-control" min="0" max="100" value="0">
-                    <div class="range-value" id="confidence_value">0%</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-light" id="cancel_filter_btn">Отмена</button>
-                <button class="btn btn-primary" id="apply_filter_btn">
-                    <i class="fas fa-filter"></i> Применить фильтр
-                </button>
-<!--                <button class="btn btn-success" id="export_excel_btn">-->
-<!--                    <i class="fas fa-file-excel"></i> Экспорт в Excel-->
-<!--                </button>-->
             </div>
         </div>
-    </div>
 
-    <!-- Modal для удаления по дате -->
-    <div class="modal" id="deleteByDateModal">
-        <div class="modal-dialog">
-            <div class="modal-header">
-                <h3 class="modal-title">Удаление записей по дате</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Внимание! Это действие нельзя отменить. Все записи до выбранной даты будут удалены.
+        <!-- Modal для просмотра изображения номера -->
+        <div class="modal" id="plateImageModal">
+            <div class="modal-dialog" style="max-width: 800px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Просмотр номера</h3>
+                    <button class="modal-close">&times;</button>
                 </div>
-                <div class="form-group">
-                    <label for="delete_before_date_modal" class="form-label">Удалить записи до</label>
-                    <input type="datetime-local" id="delete_before_date_modal" class="form-control">
+                <div class="modal-body" style="text-align: center;">
+                    <img id="plateImage" src="" style="max-width: 100%; max-height: 70vh;">
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-light" id="cancel_delete_btn">Отмена</button>
-                <button class="btn btn-danger" id="confirm_delete_modal_btn">
-                    <i class="fas fa-trash"></i> Удалить записи
-                </button>
+                <div class="modal-footer">
+                    <button class="btn btn-light" id="closePlateImageBtn">Закрыть</button>
+                </div>
             </div>
         </div>
+    </main>
+</div>
+
+<!-- Modal для добавления камеры -->
+<div class="modal" id="addCameraModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">Добавить новую камеру</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="camera_name_input" class="form-label">Название камеры</label>
+                <input type="text" id="camera_name_input" class="form-control"
+                       placeholder="Например: Въезд на территорию">
+            </div>
+            <div class="form-group">
+                <label for="camera_url_input" class="form-label">URL потока</label>
+                <input type="text" id="camera_url_input" class="form-control"
+                       placeholder="Например: rtsp://192.168.1.100:554/stream">
+                <small class="form-text">Поддерживаются RTSP, HTTP и MJPEG потоки</small>
+            </div>
+            <div class="form-group">
+                <label for="camera_location_input" class="form-label">Местоположение</label>
+                <input type="text" id="camera_location_input" class="form-control"
+                       placeholder="Например: КПП №1, главный въезд">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-light" id="cancel_camera_btn">Отмена</button>
+            <button class="btn btn-primary" id="save_camera_btn">
+                <i class="fas fa-save"></i> Сохранить камеру
+            </button>
+        </div>
     </div>
+</div>
 
-    <script>
-         // Обработчик ошибок при запросах
-         async function handleApiErrors(response) {
-             if (!response.ok) {
-                 const error = await response.json();
-                 if (response.status === 403) {
-                     showAlert(error.message || 'Недостаточно прав для этого действия', 'danger');
-                 } else {
-                     showAlert(error.message || 'Произошла ошибка', 'danger');
-                 }
-                 throw new Error(error.message);
-             }
-             return response;
-         }
+<!-- Modal для фильтрации и экспорта номеров -->
+<div class="modal" id="platesFilterModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">Фильтр и экспорт номеров</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="start_date_filter" class="form-label">Начальная дата</label>
+                <input type="datetime-local" id="start_date_filter" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="end_date_filter" class="form-label">Конечная дата</label>
+                <input type="datetime-local" id="end_date_filter" class="form-control">
+            </div>
+            <div class="form-group">
+                <label for="plate_number_filter" class="form-label">Номер (частичный ввод)</label>
+                <input type="text" id="plate_number_filter" class="form-control" placeholder="Например: А123">
+            </div>
+            <div class="form-group">
+                <label for="camera_filter" class="form-label">Камера</label>
+                <select id="camera_filter" class="form-control">
+                    <option value="">Все камеры</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="confidence_filter" class="form-label">Уверенность распознавания</label>
+                <input type="range" id="confidence_filter" class="form-control" min="0" max="100" value="0">
+                <div class="range-value" id="confidence_value">0%</div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-light" id="cancel_filter_btn">Отмена</button>
+            <button class="btn btn-primary" id="apply_filter_btn">
+                <i class="fas fa-filter"></i> Применить фильтр
+            </button>
+            <!--                <button class="btn btn-success" id="export_excel_btn">-->
+            <!--                    <i class="fas fa-file-excel"></i> Экспорт в Excel-->
+            <!--                </button>-->
+        </div>
+    </div>
+</div>
 
-         // Обернем все fetch-запросы:
-         async function safeFetch(url, options) {
-             try {
-                 const response = await fetch(url, options);
-                 return await handleApiErrors(response);
-             } catch (error) {
-                 return null;
-             }
-         }
+<!-- Modal для удаления по дате -->
+<div class="modal" id="deleteByDateModal">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 class="modal-title">Удаление записей по дате</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                Внимание! Это действие нельзя отменить. Все записи до выбранной даты будут удалены.
+            </div>
+            <div class="form-group">
+                <label for="delete_before_date_modal" class="form-label">Удалить записи до</label>
+                <input type="datetime-local" id="delete_before_date_modal" class="form-control">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-light" id="cancel_delete_btn">Отмена</button>
+            <button class="btn btn-danger" id="confirm_delete_modal_btn">
+                <i class="fas fa-trash"></i> Удалить записи
+            </button>
+        </div>
+    </div>
+</div>
 
-        // При загрузке страницы проверяем реальное состояние камер
-        async function checkCamerasStatus() {
-            try {
-                const response = await fetch('/api/cameras/status');
-                const statuses = await response.json();
-
-                Object.entries(statuses).forEach(([cameraId, status]) => {
-                    const cameraElement = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
-                    if (cameraElement) {
-                        updateCameraUI(cameraElement, status);
-                    }
-                });
-            } catch (error) {
-                console.error("Status check failed:", error);
-            }
-        }
-
-        // Обновляем UI в соответствии с реальным состоянием
-        function updateCameraUI(element, status) {
-            const indicator = element.querySelector('.status-indicator');
-            const statusText = element.querySelector('.status-text');
-            const connectBtn = element.querySelector('.connect-btn');
-            const disconnectBtn = element.querySelector('.disconnect-btn');
-
-            if (status.connected) {
-                indicator.className = 'status-indicator connected';
-                statusText.textContent = 'Подключено';
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = false;
+<script>
+    // Обработчик ошибок при запросах
+    async function handleApiErrors(response) {
+        if (!response.ok) {
+            const error = await response.json();
+            if (response.status === 403) {
+                showAlert(error.message || 'Недостаточно прав для этого действия', 'danger');
             } else {
-                indicator.className = 'status-indicator disconnected';
-                statusText.textContent = 'Отключено';
-                connectBtn.disabled = false;
-                disconnectBtn.disabled = true;
+                showAlert(error.message || 'Произошла ошибка', 'danger');
             }
+            throw new Error(error.message);
         }
+        return response;
+    }
 
-        // Вызываем при загрузке и периодически
-        document.addEventListener('DOMContentLoaded', () => {
-            checkCamerasStatus();
-            setInterval(checkCamerasStatus, 5000);  // Проверка каждые 5 секунд
-        });
+    // Обернем все fetch-запросы:
+    async function safeFetch(url, options) {
+        try {
+            const response = await fetch(url, options);
+            return await handleApiErrors(response);
+        } catch (error) {
+            return null;
+        }
+    }
 
-        async function updateCameraStatus(cameraId) {
-            try {
-                const response = await fetch(`/api/camera_status/${cameraId}`);
-                const data = await response.json();
-                const cameraEl = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
+    // При загрузке страницы проверяем реальное состояние камер
+    async function checkCamerasStatus() {
+        try {
+            const response = await fetch('/api/cameras/status');
+            const statuses = await response.json();
 
-                if (cameraEl) {
-                    const statusText = cameraEl.querySelector('.status-text');
-                    const indicator = cameraEl.querySelector('.status-indicator');
+            Object.entries(statuses).forEach(([cameraId, status]) => {
+                const cameraElement = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
+                if (cameraElement) {
+                    updateCameraUI(cameraElement, status);
+                }
+            });
+        } catch (error) {
+            console.error("Status check failed:", error);
+        }
+    }
 
-                    if (data.connected) {
-                        statusText.textContent = 'Подключено';
-                        indicator.className = 'status-indicator connected';
+    // Обновляем UI в соответствии с реальным состоянием
+    function updateCameraUI(element, status) {
+        const indicator = element.querySelector('.status-indicator');
+        const statusText = element.querySelector('.status-text');
+        const connectBtn = element.querySelector('.connect-btn');
+        const disconnectBtn = element.querySelector('.disconnect-btn');
+
+        if (status.connected) {
+            indicator.className = 'status-indicator connected';
+            statusText.textContent = 'Подключено';
+            connectBtn.disabled = true;
+            disconnectBtn.disabled = false;
+        } else {
+            indicator.className = 'status-indicator disconnected';
+            statusText.textContent = 'Отключено';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+        }
+    }
+
+    // Вызываем при загрузке и периодически
+    document.addEventListener('DOMContentLoaded', () => {
+        checkCamerasStatus();
+        setInterval(checkCamerasStatus, 5000);  // Проверка каждые 5 секунд
+    });
+
+    function updateCameraStatus(cameraId) {
+        fetch(`/api/camera_status/${cameraId}`)
+            .then(response => response.json())
+            .then(data => {
+                const cameraEl = document.querySelector(`.camera-card-simple[data-camera-id="${cameraId}"]`);
+                if (!cameraEl) return;
+
+                const statusText = cameraEl.querySelector('.status-text-simple');
+                const indicator = cameraEl.querySelector('.status-indicator-simple');
+                const connectBtn = cameraEl.querySelector('.connect-btn');
+                const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
+
+                if (data.connected) {
+                    statusText.textContent = 'Подключено';
+                    indicator.className = 'status-indicator-simple connected';
+                    if (connectBtn) connectBtn.disabled = true;
+                    if (disconnectBtn) disconnectBtn.disabled = false;
+                } else {
+                    statusText.textContent = 'Не подключено';
+                    indicator.className = 'status-indicator-simple disconnected';
+                    if (connectBtn) connectBtn.disabled = false;
+                    if (disconnectBtn) disconnectBtn.disabled = true;
+                }
+            });
+    }
+
+    // Инициализация при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function () {
+        checkAdminStatus();
+        updateCamerasList();
+
+        // Периодически обновляем статус камер
+        setInterval(() => {
+            document.querySelectorAll('.camera-card-simple').forEach(card => {
+                const cameraId = card.dataset.cameraId;
+                updateCameraStatus(cameraId);
+            });
+        }, 5000); // Обновляем каждые 5 секунд
+    });
+
+    function setupRealTimeUpdates() {
+        // Используем EventSource для получения обновлений от сервера
+        const eventSource = new EventSource('/api/updates');
+
+        eventSource.onmessage = function (event) {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'new_plate') {
+                // Добавляем новый номер в начало списка
+                const platesList = document.getElementById('plates_list');
+                if (platesList) {
+                    const plateElement = createPlateElement(data.plate);
+                    plateElement.classList.add('new-plate');
+
+                    if (platesList.firstChild) {
+                        platesList.insertBefore(plateElement, platesList.firstChild);
                     } else {
-                        statusText.textContent = 'Не подключено';
-                        indicator.className = 'status-indicator disconnected';
+                        platesList.appendChild(plateElement);
+                    }
+
+                    // Обновляем счетчик
+                    const countElement = document.getElementById('plates_count');
+                    if (countElement) {
+                        countElement.textContent = parseInt(countElement.textContent) + 1;
                     }
                 }
-            } catch (error) {
-                console.error('Ошибка при проверке статуса камеры:', error);
             }
+
+            if (data.type === 'camera_status') {
+                // Обновляем статус камеры
+                const cameraElement = document.querySelector(`.camera-card[data-camera-id="${data.camera_id}"]`);
+                if (cameraElement) {
+                    const statusElement = cameraElement.querySelector('.status-text');
+                    const indicator = cameraElement.querySelector('.status-indicator');
+
+                    if (statusElement && indicator) {
+                        statusElement.textContent = data.connected ? 'Подключено' : 'Отключено';
+                        indicator.className = data.connected ? 'status-indicator connected' : 'status-indicator disconnected';
+                    }
+                }
+            }
+        };
+
+        eventSource.onerror = function () {
+            console.log('EventSource error, reconnecting...');
+            setTimeout(setupRealTimeUpdates, 5000);
+        };
+    }
+
+    // ==================== НАСТРОЙКИ СИСТЕМЫ ====================
+
+    // Загрузка настроек системы
+    async function loadSystemSettings() {
+        try {
+            const response = await safeFetch('/api/settings');
+            if (!response) return;
+
+            const data = await response.json();
+
+            // Основные настройки
+            document.getElementById('threshold-setting').value = data.threshold;
+            document.querySelector('.threshold-value').textContent = data.threshold;
+            document.getElementById('region-setting').value = data.region || 'ru';
+
+            // Дополнительные параметры
+            document.getElementById('enable_alpr-setting').checked = data.enable_alpr !== false;
+            document.getElementById('save_images-setting').checked = data.save_images !== false;
+            document.getElementById('email_notifications-setting').checked = data.email_notifications === true;
+
+            // Управление данными
+            document.getElementById('max_age-setting').value = data.max_age || 30;
+            document.getElementById('delete_before_date-setting').value = data.delete_before_date || '';
+
+            // Статистика
+            loadSystemStats();
+
+        } catch (error) {
+            console.error('Ошибка загрузки настроек:', error);
+            showAlert('Ошибка загрузки настроек системы', 'danger');
+        }
+    }
+
+    // Сохранение настроек системы
+    async function saveSystemSettings() {
+        const settings = {
+            threshold: parseFloat(document.getElementById('threshold-setting').value),
+            region: document.getElementById('region-setting').value,
+            enable_alpr: document.getElementById('enable_alpr-setting').checked,
+            save_images: document.getElementById('save_images-setting').checked,
+            email_notifications: document.getElementById('email_notifications-setting').checked,
+            max_age: parseInt(document.getElementById('max_age-setting').value),
+            delete_before_date: document.getElementById('delete_before_date-setting').value
+        };
+
+        try {
+            const response = await safeFetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+
+            if (!response) return;
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showAlert('Настройки успешно сохранены', 'success');
+                loadSystemStats(); // Обновляем статистику
+            } else {
+                showAlert(data.message || 'Ошибка сохранения настроек', 'danger');
+            }
+        } catch (error) {
+            console.error('Ошибка сохранения настроек:', error);
+            showAlert('Ошибка сохранения настроек системы', 'danger');
+        }
+    }
+
+    // Сброс настроек системы
+    async function resetSystemSettings() {
+        if (!confirm('Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?')) {
+            return;
         }
 
-        // Обновляем статусы при переключении вкладок
+        try {
+            const response = await safeFetch('/api/settings/reset', {
+                method: 'POST'
+            });
+
+            if (!response) return;
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showAlert('Настройки сброшены к значениям по умолчанию', 'success');
+                loadSystemSettings(); // Перезагружаем настройки
+            } else {
+                showAlert(data.message || 'Ошибка сброса настроек', 'danger');
+            }
+        } catch (error) {
+            console.error('Ошибка сброса настроек:', error);
+            showAlert('Ошибка сброса настроек системы', 'danger');
+        }
+    }
+
+    async function deleteOldData() {
+        const deleteBeforeDate = document.getElementById('delete_before_date-setting').value;
+        const maxAge = document.getElementById('max_age-setting').value;
+
+        if (!deleteBeforeDate && !maxAge) {
+            showAlert('Пожалуйста, укажите дату или максимальный возраст записей', 'warning');
+            return;
+        }
+
+        try {
+            const response = await safeFetch('/api/data/cleanup', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    before_date: deleteBeforeDate || null,
+                    max_age: maxAge ? parseInt(maxAge) : null
+                })
+            });
+
+            if (!response) return;
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showAlert(`Успешно удалено ${data.deleted_count} записей`, 'success');
+                loadSystemStats();
+            } else {
+                showAlert(data.message || 'Ошибка удаления данных', 'danger');
+            }
+        } catch (error) {
+            console.error('Ошибка удаления данных:', error);
+            showAlert('Ошибка удаления данных', 'danger');
+        }
+    }
+
+    // Загрузка статистики системы
+    async function loadSystemStats() {
+        try {
+            const response = await safeFetch('/api/stats');
+            if (!response) return;
+
+            const data = await response.json();
+
+            document.getElementById('total_records').textContent = data.total_records;
+            document.getElementById('total_images').textContent = data.total_images;
+            document.getElementById('db_size').textContent = `${data.db_size} MB`;
+
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+            showAlert('Ошибка загрузки статистики системы', 'danger');
+        }
+    }
+
+    // Инициализация обработчиков событий для настроек
+    function initSettingsHandlers() {
+        // Слайдер порога уверенности
+        const thresholdSlider = document.getElementById('threshold-setting');
+        const thresholdValue = document.querySelector('.threshold-value');
+
+        thresholdSlider.addEventListener('input', function () {
+            thresholdValue.textContent = this.value;
+        });
+
+        // Кнопка сохранения настроек
+        document.getElementById('save_settings_btn').addEventListener('click', saveSystemSettings);
+
+        // Кнопка сброса настроек
+        document.getElementById('reset_settings_btn').addEventListener('click', resetSystemSettings);
+
+        // Кнопка удаления данных
+        document.getElementById('confirm_delete_data_btn').addEventListener('click', deleteOldData);
+
+        // Загрузка настроек при открытии вкладки
+        document.querySelector('.menu-link[data-section="settings"]').addEventListener('click', function () {
+            loadSystemSettings();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        checkAdminStatus();
+        initSettingsHandlers();
+
+        // Элементы DOM
+        const platesList = document.getElementById('plates_list');
+        const addCameraBtn = document.getElementById('add_camera_btn');
+        const modal = document.getElementById('addCameraModal');
+        const closeBtns = document.querySelectorAll('.modal-close, #cancel_camera_btn');
+        const saveCameraBtn = document.getElementById('save_camera_btn');
+        const cameraNameInput = document.getElementById('camera_name_input');
+        const cameraUrlInput = document.getElementById('camera_url_input');
+        const camerasContainer = document.getElementById('cameras_container');
+        const settingsModal = document.getElementById('settingsModal');
+        const thresholdInput = document.getElementById('threshold-setting');
+        const saveSettingsBtn = document.getElementById('save_settings_btn');
+        const addUserBtn = document.getElementById('add_user_btn');
+        const cancelUserBtn = document.getElementById('cancel_user_btn');
+        const saveUserBtn = document.getElementById('save_user_btn');
+
+        updateCamerasList();
+        updatePlatesList();
+
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible' &&
+                document.getElementById('monitoring-section').style.display === 'block') {
+                updateCamerasList();
+            }
+        });
+
+        // Обработка навигации в боковом меню
         document.querySelectorAll('.menu-link').forEach(link => {
-            link.addEventListener('click', function() {
-                if (this.dataset.section === 'monitoring') {
-                    document.querySelectorAll('.camera-card').forEach(card => {
-                        const cameraId = card.dataset.cameraId;
-                        updateCameraStatus(cameraId);
-                    });
-                }
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                // Удаляем active class у всех элементов меню
+                document.querySelectorAll('.menu-link').forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                // Добавляем active class к текущему элементу
+                this.classList.add('active');
+
+                // Получаем ID секции из атрибута data-section
+                const section = this.getAttribute('data-section');
+
+                // Переключаемся на соответствующую секцию
+                switchSection(section);
             });
         });
 
-        function setupRealTimeUpdates() {
-            // Используем EventSource для получения обновлений от сервера
-            const eventSource = new EventSource('/api/updates');
+        // Загрузка списка пользователей
+        function loadUsers() {
+            fetch('/api/users')
+                .then(response => response.json())
+                .then(data => {
+                    const usersList = document.getElementById('users_list');
+                    usersList.innerHTML = '';
 
-            eventSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-
-                if (data.type === 'new_plate') {
-                    // Добавляем новый номер в начало списка
-                    const platesList = document.getElementById('plates_list');
-                    if (platesList) {
-                        const plateElement = createPlateElement(data.plate);
-                        plateElement.classList.add('new-plate');
-
-                        if (platesList.firstChild) {
-                            platesList.insertBefore(plateElement, platesList.firstChild);
-                        } else {
-                            platesList.appendChild(plateElement);
-                        }
-
-                        // Обновляем счетчик
-                        const countElement = document.getElementById('plates_count');
-                        if (countElement) {
-                            countElement.textContent = parseInt(countElement.textContent) + 1;
-                        }
-                    }
-                }
-
-                if (data.type === 'camera_status') {
-                    // Обновляем статус камеры
-                    const cameraElement = document.querySelector(`.camera-card[data-camera-id="${data.camera_id}"]`);
-                    if (cameraElement) {
-                        const statusElement = cameraElement.querySelector('.status-text');
-                        const indicator = cameraElement.querySelector('.status-indicator');
-
-                        if (statusElement && indicator) {
-                            statusElement.textContent = data.connected ? 'Подключено' : 'Отключено';
-                            indicator.className = data.connected ? 'status-indicator connected' : 'status-indicator disconnected';
-                        }
-                    }
-                }
-            };
-
-            eventSource.onerror = function() {
-                console.log('EventSource error, reconnecting...');
-                setTimeout(setupRealTimeUpdates, 5000);
-            };
-        }
-
-         // ==================== НАСТРОЙКИ СИСТЕМЫ ====================
-
-         // Загрузка настроек системы
-         async function loadSystemSettings() {
-             try {
-                 const response = await safeFetch('/api/settings');
-                 if (!response) return;
-
-                 const data = await response.json();
-
-                 // Основные настройки
-                 document.getElementById('threshold-setting').value = data.threshold;
-                 document.querySelector('.threshold-value').textContent = data.threshold;
-                 document.getElementById('region-setting').value = data.region || 'ru';
-
-                 // Дополнительные параметры
-                 document.getElementById('enable_alpr-setting').checked = data.enable_alpr !== false;
-                 document.getElementById('save_images-setting').checked = data.save_images !== false;
-                 document.getElementById('email_notifications-setting').checked = data.email_notifications === true;
-
-                 // Управление данными
-                 document.getElementById('max_age-setting').value = data.max_age || 30;
-                 document.getElementById('delete_before_date-setting').value = data.delete_before_date || '';
-
-                 // Статистика
-                 loadSystemStats();
-
-             } catch (error) {
-                 console.error('Ошибка загрузки настроек:', error);
-                 showAlert('Ошибка загрузки настроек системы', 'danger');
-             }
-         }
-
-         // Сохранение настроек системы
-         async function saveSystemSettings() {
-             const settings = {
-                 threshold: parseFloat(document.getElementById('threshold-setting').value),
-                 region: document.getElementById('region-setting').value,
-                 enable_alpr: document.getElementById('enable_alpr-setting').checked,
-                 save_images: document.getElementById('save_images-setting').checked,
-                 email_notifications: document.getElementById('email_notifications-setting').checked,
-                 max_age: parseInt(document.getElementById('max_age-setting').value),
-                 delete_before_date: document.getElementById('delete_before_date-setting').value
-             };
-
-             try {
-                 const response = await safeFetch('/api/settings', {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify(settings)
-                 });
-
-                 if (!response) return;
-
-                 const data = await response.json();
-
-                 if (data.status === 'success') {
-                     showAlert('Настройки успешно сохранены', 'success');
-                     loadSystemStats(); // Обновляем статистику
-                 } else {
-                     showAlert(data.message || 'Ошибка сохранения настроек', 'danger');
-                 }
-             } catch (error) {
-                 console.error('Ошибка сохранения настроек:', error);
-                 showAlert('Ошибка сохранения настроек системы', 'danger');
-             }
-         }
-
-         // Сброс настроек системы
-         async function resetSystemSettings() {
-             if (!confirm('Вы уверены, что хотите сбросить все настройки к значениям по умолчанию?')) {
-                 return;
-             }
-
-             try {
-                 const response = await safeFetch('/api/settings/reset', {
-                     method: 'POST'
-                 });
-
-                 if (!response) return;
-
-                 const data = await response.json();
-
-                 if (data.status === 'success') {
-                     showAlert('Настройки сброшены к значениям по умолчанию', 'success');
-                     loadSystemSettings(); // Перезагружаем настройки
-                 } else {
-                     showAlert(data.message || 'Ошибка сброса настроек', 'danger');
-                 }
-             } catch (error) {
-                 console.error('Ошибка сброса настроек:', error);
-                 showAlert('Ошибка сброса настроек системы', 'danger');
-             }
-         }
-
-         async function deleteOldData() {
-             const deleteBeforeDate = document.getElementById('delete_before_date-setting').value;
-             const maxAge = document.getElementById('max_age-setting').value;
-
-             if (!deleteBeforeDate && !maxAge) {
-                 showAlert('Пожалуйста, укажите дату или максимальный возраст записей', 'warning');
-                 return;
-             }
-
-             try {
-                 const response = await safeFetch('/api/data/cleanup', {
-                     method: 'POST',
-                     headers: {
-                         'Content-Type': 'application/json'
-                     },
-                     body: JSON.stringify({
-                         before_date: deleteBeforeDate || null,
-                         max_age: maxAge ? parseInt(maxAge) : null
-                     })
-                 });
-
-                 if (!response) return;
-
-                 const data = await response.json();
-
-                 if (data.status === 'success') {
-                     showAlert(`Успешно удалено ${data.deleted_count} записей`, 'success');
-                     loadSystemStats();
-                 } else {
-                     showAlert(data.message || 'Ошибка удаления данных', 'danger');
-                 }
-             } catch (error) {
-                 console.error('Ошибка удаления данных:', error);
-                 showAlert('Ошибка удаления данных', 'danger');
-             }
-         }
-
-         // Загрузка статистики системы
-         async function loadSystemStats() {
-             try {
-                 const response = await safeFetch('/api/stats');
-                 if (!response) return;
-
-                 const data = await response.json();
-
-                 document.getElementById('total_records').textContent = data.total_records;
-                 document.getElementById('total_images').textContent = data.total_images;
-                 document.getElementById('db_size').textContent = `${data.db_size} MB`;
-
-             } catch (error) {
-                 console.error('Ошибка загрузки статистики:', error);
-                 showAlert('Ошибка загрузки статистики системы', 'danger');
-             }
-         }
-
-         // Инициализация обработчиков событий для настроек
-         function initSettingsHandlers() {
-             // Слайдер порога уверенности
-             const thresholdSlider = document.getElementById('threshold-setting');
-             const thresholdValue = document.querySelector('.threshold-value');
-
-             thresholdSlider.addEventListener('input', function () {
-                 thresholdValue.textContent = this.value;
-             });
-
-             // Кнопка сохранения настроек
-             document.getElementById('save_settings_btn').addEventListener('click', saveSystemSettings);
-
-             // Кнопка сброса настроек
-             document.getElementById('reset_settings_btn').addEventListener('click', resetSystemSettings);
-
-             // Кнопка удаления данных
-             document.getElementById('confirm_delete_data_btn').addEventListener('click', deleteOldData);
-
-             // Загрузка настроек при открытии вкладки
-             document.querySelector('.menu-link[data-section="settings"]').addEventListener('click', function () {
-                 loadSystemSettings();
-             });
-         }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminStatus();
-            initSettingsHandlers();
-
-            // Элементы DOM
-            const platesList = document.getElementById('plates_list');
-            const addCameraBtn = document.getElementById('add_camera_btn');
-            const modal = document.getElementById('addCameraModal');
-            const closeBtns = document.querySelectorAll('.modal-close, #cancel_camera_btn');
-            const saveCameraBtn = document.getElementById('save_camera_btn');
-            const cameraNameInput = document.getElementById('camera_name_input');
-            const cameraUrlInput = document.getElementById('camera_url_input');
-            const camerasContainer = document.getElementById('cameras_container');
-            const settingsModal = document.getElementById('settingsModal');
-            const thresholdInput = document.getElementById('threshold-setting');
-            const saveSettingsBtn = document.getElementById('save_settings_btn');
-            const addUserBtn = document.getElementById('add_user_btn');
-            const cancelUserBtn = document.getElementById('cancel_user_btn');
-            const saveUserBtn = document.getElementById('save_user_btn');
-
-            updateCamerasList();
-            updatePlatesList();
-
-            document.addEventListener('visibilitychange', function () {
-                if (document.visibilityState === 'visible' &&
-                    document.getElementById('monitoring-section').style.display === 'block') {
-                    updateCamerasList();
-                }
-            });
-
-            // Обработка навигации в боковом меню
-            document.querySelectorAll('.menu-link').forEach(link => {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-
-                    // Удаляем active class у всех элементов меню
-                    document.querySelectorAll('.menu-link').forEach(item => {
-                        item.classList.remove('active');
-                    });
-
-                    // Добавляем active class к текущему элементу
-                    this.classList.add('active');
-
-                    // Получаем ID секции из атрибута data-section
-                    const section = this.getAttribute('data-section');
-
-                    // Переключаемся на соответствующую секцию
-                    switchSection(section);
-                });
-            });
-
-            // Загрузка списка пользователей
-            function loadUsers() {
-                fetch('/api/users')
-                    .then(response => response.json())
-                    .then(data => {
-                        const usersList = document.getElementById('users_list');
-                        usersList.innerHTML = '';
-
-                        data.users.forEach(user => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
+                    data.users.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
                                 <td>${user.id}</td>
                                 <td>${user.username}</td>
                                 <td>${user.role}</td>
@@ -1835,48 +1948,48 @@
                                     </button>
                                 </td>
                             `;
-                            usersList.appendChild(row);
-                        });
-
-                        // Добавляем обработчики событий
-                        document.querySelectorAll('.edit-user').forEach(btn => {
-                            btn.addEventListener('click', editUser);
-                        });
-
-                        document.querySelectorAll('.delete-user').forEach(btn => {
-                            btn.addEventListener('click', deleteUser);
-                        });
+                        usersList.appendChild(row);
                     });
-            }
 
-            // Редактирование пользователя
-            function editUser(e) {
-                const userId = e.target.closest('button').dataset.id;
-                fetch(`/api/users?id=${userId}`)
-                    .then(response => response.json())
-                    .then(user => {
-                        document.getElementById('userModalTitle').textContent = 'Редактировать пользователя';
-                        document.getElementById('modal_username').value = user.username;
-                        document.getElementById('modal_username').disabled = true;
-                        document.getElementById('modal_password').value = '';
-                        document.getElementById('modal_password').placeholder = 'Оставьте пустым, чтобы не менять';
-                        document.getElementById('modal_role').value = user.role;
-
-                        const modal = document.getElementById('userModal');
-                        modal.dataset.userId = userId;
-                        modal.classList.add('show');
+                    // Добавляем обработчики событий
+                    document.querySelectorAll('.edit-user').forEach(btn => {
+                        btn.addEventListener('click', editUser);
                     });
-            }
 
-            // Удаление пользователя
-            function deleteUser(e) {
-                const userId = e.target.closest('button').dataset.id;
-                if (confirm('Вы уверены, что хотите удалить этого пользователя?')) {
-                    fetch('/api/users', {
-                        method: 'DELETE',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: userId })
-                    })
+                    document.querySelectorAll('.delete-user').forEach(btn => {
+                        btn.addEventListener('click', deleteUser);
+                    });
+                });
+        }
+
+        // Редактирование пользователя
+        function editUser(e) {
+            const userId = e.target.closest('button').dataset.id;
+            fetch(`/api/users?id=${userId}`)
+                .then(response => response.json())
+                .then(user => {
+                    document.getElementById('userModalTitle').textContent = 'Редактировать пользователя';
+                    document.getElementById('modal_username').value = user.username;
+                    document.getElementById('modal_username').disabled = true;
+                    document.getElementById('modal_password').value = '';
+                    document.getElementById('modal_password').placeholder = 'Оставьте пустым, чтобы не менять';
+                    document.getElementById('modal_role').value = user.role;
+
+                    const modal = document.getElementById('userModal');
+                    modal.dataset.userId = userId;
+                    modal.classList.add('show');
+                });
+        }
+
+        // Удаление пользователя
+        function deleteUser(e) {
+            const userId = e.target.closest('button').dataset.id;
+            if (confirm('Вы уверены, что хотите удалить этого пользователя?')) {
+                fetch('/api/users', {
+                    method: 'DELETE',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: userId})
+                })
                     .then(response => response.json())
                     .then(data => {
                         if (data.status === 'success') {
@@ -1884,56 +1997,56 @@
                             loadUsers();
                         }
                     });
-                }
+            }
+        }
+
+        // Добавление нового пользователя
+        document.getElementById('add_user_btn').addEventListener('click', function () {
+            document.getElementById('userModalTitle').textContent = 'Добавить пользователя';
+            document.getElementById('modal_username').value = '';
+            document.getElementById('modal_username').disabled = false;
+            document.getElementById('modal_password').value = '';
+            document.getElementById('modal_password').placeholder = '';
+            document.getElementById('modal_role').value = 'user';
+
+            const modal = document.getElementById('userModal');
+            modal.dataset.userId = '';
+            modal.classList.add('show');
+        });
+
+        // Сохранение пользователя
+        document.getElementById('save_user_btn').addEventListener('click', function () {
+            const modal = document.getElementById('userModal');
+            const userId = modal.dataset.userId;
+            const username = document.getElementById('modal_username').value;
+            const password = document.getElementById('modal_password').value;
+            const role = document.getElementById('modal_role').value;
+
+            if (!username) {
+                showAlert('Имя пользователя обязательно', 'danger');
+                return;
             }
 
-            // Добавление нового пользователя
-            document.getElementById('add_user_btn').addEventListener('click', function() {
-                document.getElementById('userModalTitle').textContent = 'Добавить пользователя';
-                document.getElementById('modal_username').value = '';
-                document.getElementById('modal_username').disabled = false;
-                document.getElementById('modal_password').value = '';
-                document.getElementById('modal_password').placeholder = '';
-                document.getElementById('modal_role').value = 'user';
+            if (!userId && !password) {
+                showAlert('Пароль обязателен для нового пользователя', 'danger');
+                return;
+            }
 
-                const modal = document.getElementById('userModal');
-                modal.dataset.userId = '';
-                modal.classList.add('show');
-            });
+            const data = {
+                username: username,
+                role: role
+            };
 
-            // Сохранение пользователя
-            document.getElementById('save_user_btn').addEventListener('click', function() {
-                const modal = document.getElementById('userModal');
-                const userId = modal.dataset.userId;
-                const username = document.getElementById('modal_username').value;
-                const password = document.getElementById('modal_password').value;
-                const role = document.getElementById('modal_role').value;
+            if (password) data.password = password;
 
-                if (!username) {
-                    showAlert('Имя пользователя обязательно', 'danger');
-                    return;
-                }
+            const method = userId ? 'PUT' : 'POST';
+            if (userId) data.id = userId;
 
-                if (!userId && !password) {
-                    showAlert('Пароль обязателен для нового пользователя', 'danger');
-                    return;
-                }
-
-                const data = {
-                    username: username,
-                    role: role
-                };
-
-                if (password) data.password = password;
-
-                const method = userId ? 'PUT' : 'POST';
-                if (userId) data.id = userId;
-
-                fetch('/api/users', {
-                    method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                })
+            fetch('/api/users', {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -1944,186 +2057,174 @@
                         showAlert(data.message || 'Ошибка при сохранении пользователя', 'danger');
                     }
                 });
+        });
+
+        // Закрытие модального окна
+        document.getElementById('cancel_user_btn').addEventListener('click', function () {
+            document.getElementById('userModal').classList.remove('show');
+        });
+
+        // Загружаем пользователей при открытии страницы
+        loadUsers();
+
+        function switchSection(section) {
+            // Скрываем все секции
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.style.display = 'none';
             });
 
-            // Закрытие модального окна
-            document.getElementById('cancel_user_btn').addEventListener('click', function() {
-                document.getElementById('userModal').classList.remove('show');
-            });
+            // Показываем только выбранную секцию
+            document.getElementById(`${section}-section`).style.display = 'block';
 
-            // Загружаем пользователей при открытии страницы
-            loadUsers();
+            // Обновляем заголовок страницы
+            document.querySelector('.page-title').textContent = document.querySelector(`.menu-link[data-section="${section}"] span`).textContent;
 
-            function switchSection(section) {
-                // Скрываем все секции
-                document.querySelectorAll('.content-section').forEach(section => {
-                    section.style.display = 'none';
-                });
-
-                // Показываем только выбранную секцию
-                document.getElementById(`${section}-section`).style.display = 'block';
-
-                // Обновляем заголовок страницы
-                document.querySelector('.page-title').textContent = document.querySelector(`.menu-link[data-section="${section}"] span`).textContent;
-
-                // Если это секция камер, обновляем список камер
-                if (section === 'monitoring') {
-                    updateCamerasList();
-                }
-
-                // Если это секция номеров, обновляем список номеров
-                if (section === 'plates') {
-                    updatePlatesList();
-                }
-
-                // Если это секция пользователей, обновляем список пользователей
-                if (section === 'users') {
-                    loadUsers();
-                }
+            // Если это секция камер, обновляем список камер
+            if (section === 'monitoring') {
+                updateCamerasList();
             }
 
-            // Проверка прав администратора
-            function checkAdminStatus() {
-                fetch('/api/check_admin')
+            // Если это секция номеров, обновляем список номеров
+            if (section === 'plates') {
+                updatePlatesList();
+            }
+
+            // Если это секция пользователей, обновляем список пользователей
+            if (section === 'users') {
+                loadUsers();
+            }
+        }
+
+        // Проверка прав администратора
+        function checkAdminStatus() {
+            fetch('/api/check_admin')
                 .then(response => response.json())
                 .then(data => {
-                    if (!data.is_admin) {
-                        // Скрываем элементы для админов
+                    if (data.is_admin) {
+                        document.body.classList.add('admin');
+                        document.querySelectorAll('.admin-only').forEach(el => {
+                            el.style.display = '';
+                        });
+                    } else {
+                        document.body.classList.remove('admin');
                         document.querySelectorAll('.admin-only').forEach(el => {
                             el.style.display = 'none';
                         });
-
-                        // Показываем только разрешенные вкладки
-                        const allowedTabs = ['monitoring', 'plates', 'stats'];
-                        document.querySelectorAll('.menu-link').forEach(link => {
-                            if (!allowedTabs.includes(link.dataset.section)) {
-                                link.style.display = 'none';
-                            }
-                        });
                     }
                 });
+        }
+
+        // Обработчик клика по кнопке просмотра изображения
+        document.addEventListener('click', function (e) {
+            if (e.target.closest('.view-plate-btn')) {
+                const plateId = e.target.closest('.view-plate-btn').dataset.plateId;
+                showPlateImage(plateId);
             }
+        });
 
-            // Обработчик клика по кнопке просмотра изображения
-            document.addEventListener('click', function(e) {
-                if (e.target.closest('.view-plate-btn')) {
-                    const plateId = e.target.closest('.view-plate-btn').dataset.plateId;
-                    showPlateImage(plateId);
-                }
-            });
+        function showPlateImage(plateId) {
+            const modal = document.getElementById('plateImageModal');
+            const plateImage = document.getElementById('plateImage');
 
-            function showPlateImage(plateId) {
-                const modal = document.getElementById('plateImageModal');
-                const plateImage = document.getElementById('plateImage');
+            // Устанавливаем источник изображения
+            plateImage.src = `/api/plate_image/${plateId}?${Date.now()}`;
 
-                // Устанавливаем источник изображения
-                plateImage.src = `/api/plate_image/${plateId}?${Date.now()}`;
+            // Показываем модальное окно
+            modal.classList.add('show');
 
-                // Показываем модальное окно
-                modal.classList.add('show');
+            // Обработчик закрытия
+            document.getElementById('closePlateImageBtn').onclick = function () {
+                modal.classList.remove('show');
+            };
 
-                // Обработчик закрытия
-                document.getElementById('closePlateImageBtn').onclick = function() {
+            // Закрытие по клику вне окна
+            modal.onclick = function (e) {
+                if (e.target === modal) {
                     modal.classList.remove('show');
-                };
+                }
+            };
+        }
 
-                // Закрытие по клику вне окна
-                modal.onclick = function(e) {
-                    if (e.target === modal) {
-                        modal.classList.remove('show');
-                    }
-                };
-            }
-
-            // Функция для отображения уведомления
-            function showAlert(message, type = 'success') {
-                const alert = document.createElement('div');
-                alert.className = `alert alert-${type}`;
-                alert.innerHTML = `
+        // Функция для отображения уведомления
+        function showAlert(message, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.innerHTML = `
                     <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'times-circle' : 'info-circle'}"></i>
                     ${message}
                 `;
 
-                document.body.appendChild(alert);
+            document.body.appendChild(alert);
 
-                // Позиционирование уведомления
-                alert.style.position = 'fixed';
-                alert.style.top = '20px';
-                alert.style.right = '20px';
-                alert.style.zIndex = '2000';
-                alert.style.maxWidth = '400px';
-                alert.style.boxShadow = '0 3px 10px rgba(0,0,0,0.1)';
+            // Позиционирование уведомления
+            alert.style.position = 'fixed';
+            alert.style.top = '20px';
+            alert.style.right = '20px';
+            alert.style.zIndex = '2000';
+            alert.style.maxWidth = '400px';
+            alert.style.boxShadow = '0 3px 10px rgba(0,0,0,0.1)';
 
-                // Автоматическое скрытие
-                setTimeout(() => {
-                    alert.style.opacity = '0';
-                    alert.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => alert.remove(), 500);
-                }, 5000);
-            }
+            // Автоматическое скрытие
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                alert.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => alert.remove(), 500);
+            }, 5000);
+        }
 
-            // Функция для создания элемента камеры
-            function createCameraElement(camera) {
-                const cameraEl = document.createElement('div');
-                cameraEl.className = 'camera-card';
-                cameraEl.dataset.cameraId = camera.id;
+        // Функция для создания элемента камеры
+        function createCameraElement(camera) {
+            const cameraEl = document.createElement('div');
+            cameraEl.className = 'camera-card-simple';
+            cameraEl.dataset.cameraId = camera.id;
 
-                // Проверяем, является ли пользователь администратором
-                const isAdmin = document.querySelector('.admin-only').style.display !== 'none';
-
-                cameraEl.innerHTML = `
-                <div class="camera-header">
-                    <div class="camera-name">
+            cameraEl.innerHTML = `
+                <div class="camera-header-simple">
+                    <div class="camera-name-simple">
                         <i class="fas fa-video"></i>
                         ${camera.name}
                     </div>
-                    ${isAdmin ? `
-                    <div class="camera-actions">
-                        <button class="btn btn-sm btn-light view-btn" title="Открыть в отдельном окне">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                        <button class="btn btn-sm btn-light edit-btn" title="Редактировать">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger delete-btn" title="Удалить камеру">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                    ` : ''}
-                </div>
-                <div class="camera-feed">
-                    <img class="camera-image" data-camera-id="${camera.id}" src="">
-                    <div class="camera-overlay">
-                        <div class="spinner"></div>
-                        <p>Подключение к камере...</p>
+                    <div class="admin-only">
+                        <div class="camera-actions">
+                            <button class="btn btn-sm btn-light edit-btn" title="Редактировать">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger delete-btn" title="Удалить камеру">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="camera-status">
-                    <div class="status-info">
-                        <span class="status-indicator disconnected"></span>
-                        <span class="status-text">Не подключено</span>
+                <div class="camera-placeholder">
+                    <i class="fas fa-video" style="font-size: 2rem;"></i>
+                    <button class="btn btn-primary open-camera-btn" data-camera-id="${camera.id}">
+                        <i class="fas fa-expand"></i> Открыть камеру
+                    </button>
+                </div>
+                <div class="camera-status-simple">
+                    <div class="status-info-simple">
+                        <span class="status-indicator-simple disconnected"></span>
+                        <span class="status-text-simple">Не подключено</span>
                     </div>
-                    ${isAdmin ? `
-                    <div class="camera-controls">
+                    <div class="admin-controls">
                         <button class="btn btn-sm btn-success connect-btn">Подключить</button>
                         <button class="btn btn-sm btn-danger disconnect-btn" disabled>Отключить</button>
                     </div>
-                    ` : ''}
                 </div>
             `;
-                return cameraEl;
-            }
+            return cameraEl;
+        }
 
-            // Функция для создания элемента распознанного номера
-            function createPlateElement(plate) {
-                const date = new Date(plate.timestamp);
-                const moscowOffset = 3 * 60 * 60 * 1000; // MSK (UTC+3)
-                const moscowTime = new Date(date.getTime() + moscowOffset);
+        // Функция для создания элемента распознанного номера
+        function createPlateElement(plate) {
+            const date = new Date(plate.timestamp);
+            const moscowOffset = 3 * 60 * 60 * 1000; // MSK (UTC+3)
+            const moscowTime = new Date(date.getTime() + moscowOffset);
 
-                const plateItem = document.createElement('div');
-                plateItem.className = 'plate-item';
-                plateItem.dataset.plateId = plate.id;
-                plateItem.innerHTML = `
+            const plateItem = document.createElement('div');
+            plateItem.className = 'plate-item';
+            plateItem.dataset.plateId = plate.id;
+            plateItem.innerHTML = `
                     <div class="plate-info">
                         <div class="plate-number">${plate.text}</div>
                         <div class="plate-details">
@@ -2144,249 +2245,212 @@
                         </button>
                     </div>
                 `;
-                return plateItem;
-            }
+            return plateItem;
+        }
 
-            // Обновление списка распознанных номеров
-            function updatePlatesList() {
-                 fetch('/api/recent_plates')
-                     .then(response => response.json())
-                     .then(data => {
-                         const platesList = document.getElementById('plates_list');
-                         if (data.plates && data.plates.length > 0) {
-                             platesList.innerHTML = '';
-                             data.plates.forEach(plate => {
-                                 platesList.appendChild(createPlateElement(plate));
-                             });
-                         } else {
-                             platesList.innerHTML = `
+        // Обновление списка распознанных номеров
+        function updatePlatesList() {
+            fetch('/api/recent_plates')
+                .then(response => response.json())
+                .then(data => {
+                    const platesList = document.getElementById('plates_list');
+                    if (data.plates && data.plates.length > 0) {
+                        platesList.innerHTML = '';
+                        data.plates.forEach(plate => {
+                            platesList.appendChild(createPlateElement(plate));
+                        });
+                    } else {
+                        platesList.innerHTML = `
                                  <div class="alert alert-info">
                                      <i class="fas fa-info-circle"></i>
                                      Нет данных о распознанных номерных знаках
                                  </div>
                              `;
-                         }
-                     })
-                     .catch(error => {
-                         console.error('Ошибка при загрузке номеров:', error);
-                         platesList.innerHTML = `
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке номеров:', error);
+                    platesList.innerHTML = `
                              <div class="alert alert-danger">
                                  <i class="fas fa-exclamation-circle"></i>
                                  Ошибка загрузки данных
                              </div>
                          `;
-                     });
-            }
+                });
+        }
 
-            // Обновление списка камер
-            function updateCamerasList() {
-                fetch('/api/cameras')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.cameras && data.cameras.length > 0) {
-                            camerasContainer.innerHTML = '';
-                            data.cameras.forEach(camera => {
-                                const cameraEl = createCameraElement(camera);
-                                camerasContainer.appendChild(cameraEl);
+        // Обновление списка камер
+        function updateCamerasList() {
+            fetch('/api/cameras')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.cameras && data.cameras.length > 0) {
+                        camerasContainer.innerHTML = '';
+                        data.cameras.forEach(camera => {
+                            const cameraEl = createCameraElement(camera);
+                            camerasContainer.appendChild(cameraEl);
 
-                                if (camera.connected) {
-                                    connectCamera(camera.id);
-                                }
+                            if (camera.connected) {
+                                connectCamera(camera.id);
+                            }
 
-                                // Добавляем обработчики событий
-                                const viewBtn = cameraEl.querySelector('.view-btn');
-                                if (viewBtn) {
-                                    viewBtn.addEventListener('click', () => {
-                                        window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
+                            // Добавляем обработчики событий
+                            const viewBtn = cameraEl.querySelector('.view-btn');
+                            if (viewBtn) {
+                                viewBtn.addEventListener('click', () => {
+                                    window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
+                                });
+                            }
+
+                            // Только для администраторов
+                            const isAdmin = document.querySelector('.admin-only').style.display !== 'none';
+                            if (isAdmin) {
+                                const connectBtn = cameraEl.querySelector('.connect-btn');
+                                const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
+                                const editBtn = cameraEl.querySelector('.edit-btn');
+                                const deleteBtn = cameraEl.querySelector('.delete-btn');
+
+                                if (connectBtn) {
+                                    connectBtn.addEventListener('click', () => {
+                                        connectCamera(camera.id);
                                     });
                                 }
 
-                                // Только для администраторов
-                                const isAdmin = document.querySelector('.admin-only').style.display !== 'none';
-                                if (isAdmin) {
-                                    const connectBtn = cameraEl.querySelector('.connect-btn');
-                                    const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
-                                    const editBtn = cameraEl.querySelector('.edit-btn');
-                                    const deleteBtn = cameraEl.querySelector('.delete-btn');
-
-                                    if (connectBtn) {
-                                        connectBtn.addEventListener('click', () => {
-                                            connectCamera(camera.id);
-                                        });
-                                    }
-
-                                    if (disconnectBtn) {
-                                        disconnectBtn.addEventListener('click', () => {
-                                            disconnectCamera(camera.id);
-                                        });
-                                    }
-
-                                    if (editBtn) {
-                                        editBtn.addEventListener('click', () => {
-                                            editCamera(camera);
-                                        });
-                                    }
-
-                                    if (deleteBtn) {
-                                        deleteBtn.addEventListener('click', () => {
-                                            if (confirm(`Удалить камеру "${camera.name}"?`)) {
-                                                deleteCamera(camera.id);
-                                            }
-                                        });
-                                    }
+                                if (disconnectBtn) {
+                                    disconnectBtn.addEventListener('click', () => {
+                                        disconnectCamera(camera.id);
+                                    });
                                 }
-                            });
-                        } else {
-                            camerasContainer.innerHTML = `
+
+                                if (editBtn) {
+                                    editBtn.addEventListener('click', () => {
+                                        editCamera(camera);
+                                    });
+                                }
+
+                                if (deleteBtn) {
+                                    deleteBtn.addEventListener('click', () => {
+                                        if (confirm(`Удалить камеру "${camera.name}"?`)) {
+                                            deleteCamera(camera.id);
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        camerasContainer.innerHTML = `
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
                         Нет добавленных камер. Нажмите "Добавить камеру" для начала работы.
                     </div>
                 `;
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при загрузке камер:', error);
-                        camerasContainer.innerHTML = `
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка при загрузке камер:', error);
+                    camerasContainer.innerHTML = `
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-circle"></i>
                     Ошибка загрузки данных камер
                 </div>
             `;
-                    });
-            }
+                });
+        }
 
-            // Подключение камеры
-            function connectCamera(cameraId) {
-                const cameraEl = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
-                if (!cameraEl) return;
+        // Подключение камеры
+        function connectCamera(cameraId) {
+            const cameraEl = document.querySelector(`.camera-card-simple[data-camera-id="${cameraId}"]`);
+            if (!cameraEl) return;
 
-                const feedElement = cameraEl.querySelector('.camera-image');
-                const statusText = cameraEl.querySelector('.status-text');
-                const indicator = cameraEl.querySelector('.status-indicator');
-                const connectBtn = cameraEl.querySelector('.connect-btn');
-                const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
-                const overlay = cameraEl.querySelector('.camera-overlay');
+            const statusText = cameraEl.querySelector('.status-text-simple');
+            const indicator = cameraEl.querySelector('.status-indicator-simple');
+            const connectBtn = cameraEl.querySelector('.connect-btn');
+            const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
 
-                statusText.textContent = 'Подключение...';
-                indicator.className = 'status-indicator connecting';
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = true;
-                overlay.style.display = 'flex';
+            statusText.textContent = 'Подключение...';
+            indicator.className = 'status-indicator-simple';
+            if (connectBtn) connectBtn.disabled = true;
+            if (disconnectBtn) disconnectBtn.disabled = true;
 
-                fetch('/api/connect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: cameraId })
-                })
+            fetch('/api/connect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: cameraId})
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        feedElement.src = `/video_feed/${cameraId}?${Date.now()}`;
-                        feedElement.onload = () => {
-                            overlay.style.display = 'none';
-                            statusText.textContent = 'Подключено';
-                            indicator.className = 'status-indicator connected';
-                            connectBtn.disabled = true;
-                            disconnectBtn.disabled = false;
-                            showAlert(`Камера "${data.camera_name}" успешно подключена`, 'success');
-                        };
-                        feedElement.onerror = () => {
-                            overlay.style.display = 'flex';
-                            overlay.innerHTML = `
-                                <div class="alert alert-danger">
-                                    <i class="fas fa-exclamation-circle"></i>
-                                    Ошибка подключения к видеопотоку
-                                </div>
-                            `;
-                            statusText.textContent = 'Ошибка подключения';
-                            indicator.className = 'status-indicator error';
-                            connectBtn.disabled = false;
-                            disconnectBtn.disabled = true;
-                        };
+                        statusText.textContent = 'Подключено';
+                        indicator.className = 'status-indicator-simple connected';
+                        if (connectBtn) connectBtn.disabled = true;
+                        if (disconnectBtn) disconnectBtn.disabled = false;
+                        showAlert(`Камера "${data.camera.name}" успешно подключена`, 'success');
                     } else {
-                        overlay.style.display = 'flex';
-                        overlay.innerHTML = `
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-circle"></i>
-                                ${data.message || 'Ошибка подключения'}
-                            </div>
-                        `;
                         statusText.textContent = 'Ошибка подключения';
-                        indicator.className = 'status-indicator error';
-                        connectBtn.disabled = false;
-                        disconnectBtn.disabled = true;
+                        indicator.className = 'status-indicator-simple error';
+                        if (connectBtn) connectBtn.disabled = false;
+                        if (disconnectBtn) disconnectBtn.disabled = true;
                     }
                 })
                 .catch(error => {
                     console.error('Ошибка подключения:', error);
-                    overlay.style.display = 'flex';
-                    overlay.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle"></i>
-                            Ошибка сети: ${error.message}
-                        </div>
-                    `;
                     statusText.textContent = 'Ошибка подключения';
-                    indicator.className = 'status-indicator error';
-                    connectBtn.disabled = false;
-                    disconnectBtn.disabled = true;
+                    indicator.className = 'status-indicator-simple error';
+                    if (connectBtn) connectBtn.disabled = false;
+                    if (disconnectBtn) disconnectBtn.disabled = true;
                 });
-            }
+        }
 
-            // Отключение камеры
-            function disconnectCamera(cameraId) {
-                const cameraEl = document.querySelector(`.camera-card[data-camera-id="${cameraId}"]`);
-                if (!cameraEl) return;
+        // Отключение камеры
+        function disconnectCamera(cameraId) {
+            const cameraEl = document.querySelector(`.camera-card-simple[data-camera-id="${cameraId}"]`);
+            if (!cameraEl) return;
 
-                const feedElement = cameraEl.querySelector('.camera-image');
-                const statusText = cameraEl.querySelector('.status-text');
-                const indicator = cameraEl.querySelector('.status-indicator');
-                const connectBtn = cameraEl.querySelector('.connect-btn');
-                const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
-                const overlay = cameraEl.querySelector('.camera-overlay');
+            const statusText = cameraEl.querySelector('.status-text-simple');
+            const indicator = cameraEl.querySelector('.status-indicator-simple');
+            const connectBtn = cameraEl.querySelector('.connect-btn');
+            const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
 
-                statusText.textContent = 'Отключение...';
-                indicator.className = 'status-indicator';
-                connectBtn.disabled = true;
-                disconnectBtn.disabled = true;
+            statusText.textContent = 'Отключение...';
+            indicator.className = 'status-indicator-simple';
+            if (connectBtn) connectBtn.disabled = true;
+            if (disconnectBtn) disconnectBtn.disabled = true;
 
-                fetch('/api/disconnect', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: cameraId })
-                })
+            fetch('/api/disconnect', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: cameraId})
+            })
                 .then(response => response.json())
                 .then(data => {
-                    feedElement.src = '';
-                    overlay.style.display = 'none';
                     statusText.textContent = 'Отключено';
-                    indicator.className = 'status-indicator disconnected';
-                    connectBtn.disabled = false;
-                    disconnectBtn.disabled = true;
-                    showAlert(`Камера "${data.camera_name}" отключена`, 'info');
+                    indicator.className = 'status-indicator-simple disconnected';
+                    if (connectBtn) connectBtn.disabled = false;
+                    if (disconnectBtn) disconnectBtn.disabled = true;
+                    showAlert(`Камера "${data.camera.name}" отключена`, 'info');
                 })
                 .catch(error => {
                     console.error('Ошибка отключения:', error);
                     statusText.textContent = 'Ошибка отключения';
-                    indicator.className = 'status-indicator error';
-                    connectBtn.disabled = false;
-                    disconnectBtn.disabled = true;
+                    indicator.className = 'status-indicator-simple error';
+                    if (connectBtn) connectBtn.disabled = false;
+                    if (disconnectBtn) disconnectBtn.disabled = true;
                 });
+        }
+
+
+        // Добавление новой камеры
+        function addCamera(name, url, location) {
+            if (!name || !url) {
+                showAlert('Пожалуйста, заполните все обязательные поля', 'danger');
+                return;
             }
 
-            // Добавление новой камеры
-            function addCamera(name, url, location) {
-                if (!name || !url) {
-                    showAlert('Пожалуйста, заполните все обязательные поля', 'danger');
-                    return;
-                }
-
-                fetch('/api/cameras', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, url, location })
-                })
+            fetch('/api/cameras', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({name, url, location})
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -2403,60 +2467,104 @@
                     console.error('Ошибка:', error);
                     showAlert('Ошибка при добавлении камеры', 'danger');
                 });
-            }
+        }
 
-            // Редактирование камеры
-            function editCamera(camera) {
-                cameraNameInput.value = camera.name;
-                cameraUrlInput.value = camera.url;
-                document.getElementById('camera_location_input').value = camera.location || '';
-                modal.classList.add('show');
+        // Редактирование камеры
+        function editCamera(camera) {
+            cameraNameInput.value = camera.name;
+            cameraUrlInput.value = camera.url;
+            document.getElementById('camera_location_input').value = camera.location || '';
+            modal.classList.add('show');
 
-                // Изменяем текст кнопки и модального окна для редактирования
-                document.querySelector('#addCameraModal .modal-title').textContent = 'Редактировать камеру';
-                saveCameraBtn.textContent = 'Сохранить изменения';
-                saveCameraBtn.onclick = () => {
-                    updateCamera(camera.id, cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
-                };
-            }
+            // Изменяем текст кнопки и модального окна для редактирования
+            document.querySelector('#addCameraModal .modal-title').textContent = 'Редактировать камеру';
+            saveCameraBtn.textContent = 'Сохранить изменения';
+            saveCameraBtn.onclick = () => {
+                updateCamera(camera.id, cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
+            };
+        }
 
-            // Обновление камеры
-            function updateCamera(id, name, url, location) {
-                fetch('/api/cameras', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, name, url, location })
-                })
+        // Обновление камеры
+        function updateCamerasList() {
+            fetch('/api/cameras')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.status === 'success') {
-                        updateCamerasList();
-                        modal.classList.remove('show');
-                        showAlert('Камера успешно обновлена', 'success');
+                    if (data.cameras && data.cameras.length > 0) {
+                        camerasContainer.innerHTML = '';
+                        data.cameras.forEach(camera => {
+                            const cameraEl = createCameraElement(camera);
+                            camerasContainer.appendChild(cameraEl);
 
-                        // Возвращаем исходное состояние модального окна
-                        document.querySelector('#addCameraModal .modal-title').textContent = 'Добавить новую камеру';
-                        saveCameraBtn.textContent = 'Сохранить камеру';
-                        saveCameraBtn.onclick = () => {
-                            addCamera(cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
-                        };
+                            // Добавляем обработчик для кнопки открытия камеры
+                            const openBtn = cameraEl.querySelector('.open-camera-btn');
+                            if (openBtn) {
+                                openBtn.addEventListener('click', () => {
+                                    window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
+                                });
+                            }
+
+                            // Для администраторов добавляем обработчики управления
+                            const connectBtn = cameraEl.querySelector('.connect-btn');
+                            const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
+                            const editBtn = cameraEl.querySelector('.edit-btn');
+                            const deleteBtn = cameraEl.querySelector('.delete-btn');
+
+                            if (connectBtn) {
+                                connectBtn.addEventListener('click', () => {
+                                    connectCamera(camera.id);
+                                });
+                            }
+
+                            if (disconnectBtn) {
+                                disconnectBtn.addEventListener('click', () => {
+                                    disconnectCamera(camera.id);
+                                });
+                            }
+
+                            if (editBtn) {
+                                editBtn.addEventListener('click', () => {
+                                    editCamera(camera);
+                                });
+                            }
+
+                            if (deleteBtn) {
+                                deleteBtn.addEventListener('click', () => {
+                                    if (confirm(`Удалить камеру "${camera.name}"?`)) {
+                                        deleteCamera(camera.id);
+                                    }
+                                });
+                            }
+
+                            // Обновляем статус камеры
+                            updateCameraStatus(camera.id);
+                        });
                     } else {
-                        showAlert(`Ошибка: ${data.message}`, 'danger');
+                        camerasContainer.innerHTML = `
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Нет добавленных камер. Нажмите "Добавить камеру" для начала работы.
+                            </div>
+                        `;
                     }
                 })
                 .catch(error => {
-                    console.error('Ошибка:', error);
-                    showAlert('Ошибка при обновлении камеры', 'danger');
+                    console.error('Ошибка при загрузке камер:', error);
+                    camerasContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Ошибка загрузки данных камер
+                        </div>
+                    `;
                 });
-            }
+        }
 
-            // Удаление камеры
-            function deleteCamera(cameraId) {
-                fetch('/api/cameras', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: cameraId })
-                })
+        // Удаление камеры
+        function deleteCamera(cameraId) {
+            fetch('/api/cameras', {
+                method: 'DELETE',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({id: cameraId})
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -2470,21 +2578,21 @@
                     console.error('Ошибка:', error);
                     showAlert('Ошибка при удалении камеры', 'danger');
                 });
+        }
+
+        // Установка порога распознавания
+        function setThreshold() {
+            const threshold = parseFloat(thresholdInput.value);
+            if (isNaN(threshold) || threshold < 0.1 || threshold > 0.99) {
+                showAlert('Пожалуйста, введите значение от 0.1 до 0.99', 'danger');
+                return;
             }
 
-            // Установка порога распознавания
-            function setThreshold() {
-                const threshold = parseFloat(thresholdInput.value);
-                if (isNaN(threshold) || threshold < 0.1 || threshold > 0.99) {
-                    showAlert('Пожалуйста, введите значение от 0.1 до 0.99', 'danger');
-                    return;
-                }
-
-                fetch('/api/threshold', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ threshold })
-                })
+            fetch('/api/threshold', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({threshold})
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -2498,180 +2606,180 @@
                     console.error('Ошибка:', error);
                     showAlert('Ошибка при установке порога', 'danger');
                 });
-            }
+        }
 
-            // Обработчики событий
-            addCameraBtn.addEventListener('click', function() {
-                // Сброс формы перед открытием
-                cameraNameInput.value = '';
-                cameraUrlInput.value = '';
-                document.getElementById('camera_location_input').value = '';
-                document.querySelector('#addCameraModal .modal-title').textContent = 'Добавить новую камеру';
-                saveCameraBtn.textContent = 'Сохранить камеру';
-                saveCameraBtn.onclick = () => {
-                    addCamera(cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
-                };
-                modal.classList.add('show');
-            });
-
-            closeBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    modal.classList.remove('show');
-                    settingsModal.classList.remove('show');
-                });
-            });
-
-            saveCameraBtn.addEventListener('click', function() {
+        // Обработчики событий
+        addCameraBtn.addEventListener('click', function () {
+            // Сброс формы перед открытием
+            cameraNameInput.value = '';
+            cameraUrlInput.value = '';
+            document.getElementById('camera_location_input').value = '';
+            document.querySelector('#addCameraModal .modal-title').textContent = 'Добавить новую камеру';
+            saveCameraBtn.textContent = 'Сохранить камеру';
+            saveCameraBtn.onclick = () => {
                 addCamera(cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
+            };
+            modal.classList.add('show');
+        });
+
+        closeBtns.forEach(btn => {
+            btn.addEventListener('click', function () {
+                modal.classList.remove('show');
+                settingsModal.classList.remove('show');
             });
+        });
 
-            saveSettingsBtn.addEventListener('click', setThreshold);
+        saveCameraBtn.addEventListener('click', function () {
+            addCamera(cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
+        });
 
-            // Закрытие модальных окон при клике вне их
-            window.addEventListener('click', function(event) {
-                if (event.target === modal) {
-                    modal.classList.remove('show');
-                }
-                if (event.target === settingsModal) {
-                    settingsModal.classList.remove('show');
-                }
-                if (event.target === document.getElementById('userModal')) {
-                    document.getElementById('userModal').classList.remove('show');
-                }
-            });
+        saveSettingsBtn.addEventListener('click', setThreshold);
 
-            // Инициализация
-            updateCamerasList();
-            updatePlatesList();
-            setupRealTimeUpdates();
+        // Закрытие модальных окон при клике вне их
+        window.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                modal.classList.remove('show');
+            }
+            if (event.target === settingsModal) {
+                settingsModal.classList.remove('show');
+            }
+            if (event.target === document.getElementById('userModal')) {
+                document.getElementById('userModal').classList.remove('show');
+            }
+        });
 
-            // Обработчики для фильтрации и экспорта
-            const filterModal = document.getElementById('platesFilterModal');
-            const deleteModal = document.getElementById('deleteByDateModal');
-            const confidenceFilter = document.getElementById('confidence_filter');
-            const confidenceValue = document.getElementById('confidence_value');
+        // Инициализация
+        updateCamerasList();
+        updatePlatesList();
+        setupRealTimeUpdates();
 
-            // Обновление значения уверенности при движении слайдера
-            confidenceFilter.addEventListener('input', function() {
-                confidenceValue.textContent = this.value + '%';
-            });
+        // Обработчики для фильтрации и экспорта
+        const filterModal = document.getElementById('platesFilterModal');
+        const deleteModal = document.getElementById('deleteByDateModal');
+        const confidenceFilter = document.getElementById('confidence_filter');
+        const confidenceValue = document.getElementById('confidence_value');
 
-            // Открытие модального окна фильтрации
-            document.getElementById('filter_plates_btn').addEventListener('click', function() {
-                filterModal.classList.add('show');
-                // Заполнение списка камер
-                updateCameraFilterList();
-            });
+        // Обновление значения уверенности при движении слайдера
+        confidenceFilter.addEventListener('input', function () {
+            confidenceValue.textContent = this.value + '%';
+        });
 
-            // Открытие модального окна удаления
-            document.querySelector('.menu-link[data-section="settings"]').addEventListener('click', function() {
-                switchSection('settings');
-            });
+        // Открытие модального окна фильтрации
+        document.getElementById('filter_plates_btn').addEventListener('click', function () {
+            filterModal.classList.add('show');
+            // Заполнение списка камер
+            updateCameraFilterList();
+        });
 
-            // Применение фильтра
-            document.getElementById('apply_filter_btn').addEventListener('click', function() {
-                const startDate = document.getElementById('start_date_filter').value;
-                const endDate = document.getElementById('end_date_filter').value;
-                const plateNumber = document.getElementById('plate_number_filter').value;
-                const cameraId = document.getElementById('camera_filter').value;
-                const confidence = confidenceFilter.value / 100;
+        // Открытие модального окна удаления
+        document.querySelector('.menu-link[data-section="settings"]').addEventListener('click', function () {
+            switchSection('settings');
+        });
 
-                fetchFilteredPlates(startDate, endDate, plateNumber, cameraId, confidence);
-                filterModal.classList.remove('show');
-            });
+        // Применение фильтра
+        document.getElementById('apply_filter_btn').addEventListener('click', function () {
+            const startDate = document.getElementById('start_date_filter').value;
+            const endDate = document.getElementById('end_date_filter').value;
+            const plateNumber = document.getElementById('plate_number_filter').value;
+            const cameraId = document.getElementById('camera_filter').value;
+            const confidence = confidenceFilter.value / 100;
 
-            // Экспорт в Excel
-            document.getElementById('export_excel_btn').addEventListener('click', function() {
-                const startDate = document.getElementById('start_date_filter').value;
-                const endDate = document.getElementById('end_date_filter').value;
-                const plateNumber = document.getElementById('plate_number_filter').value;
-                const cameraId = document.getElementById('camera_filter').value;
-                const confidence = confidenceFilter.value / 100;
+            fetchFilteredPlates(startDate, endDate, plateNumber, cameraId, confidence);
+            filterModal.classList.remove('show');
+        });
 
-                exportToExcel(startDate, endDate, plateNumber, cameraId, confidence);
-            });
+        // Экспорт в Excel
+        document.getElementById('export_excel_btn').addEventListener('click', function () {
+            const startDate = document.getElementById('start_date_filter').value;
+            const endDate = document.getElementById('end_date_filter').value;
+            const plateNumber = document.getElementById('plate_number_filter').value;
+            const cameraId = document.getElementById('camera_filter').value;
+            const confidence = confidenceFilter.value / 100;
 
-            // Удаление записей по дате
-            document.getElementById('confirm_delete_modal_btn').addEventListener('click', function() {
-                const deleteBeforeDate = document.getElementById('delete_before_date_modal').value;
-                if (!deleteBeforeDate) {
-                    showAlert('Пожалуйста, выберите дату', 'danger');
-                    return;
-                }
+            exportToExcel(startDate, endDate, plateNumber, cameraId, confidence);
+        });
 
-                if (confirm('Вы уверены, что хотите удалить все записи до выбранной даты? Это действие нельзя отменить.')) {
-                    deletePlatesBeforeDate(deleteBeforeDate);
-                    deleteModal.classList.remove('show');
-                }
-            });
+        // Удаление записей по дате
+        document.getElementById('confirm_delete_modal_btn').addEventListener('click', function () {
+            const deleteBeforeDate = document.getElementById('delete_before_date_modal').value;
+            if (!deleteBeforeDate) {
+                showAlert('Пожалуйста, выберите дату', 'danger');
+                return;
+            }
 
-            // Закрытие модальных окон
-            document.getElementById('cancel_filter_btn').addEventListener('click', function() {
-                filterModal.classList.remove('show');
-            });
-
-            document.getElementById('cancel_delete_btn').addEventListener('click', function() {
+            if (confirm('Вы уверены, что хотите удалить все записи до выбранной даты? Это действие нельзя отменить.')) {
+                deletePlatesBeforeDate(deleteBeforeDate);
                 deleteModal.classList.remove('show');
-            });
+            }
+        });
 
-            // Функция обновления списка камер в фильтре
-            function updateCameraFilterList() {
-                const cameraFilter = document.getElementById('camera_filter');
-                cameraFilter.innerHTML = '<option value="">Все камеры</option>';
+        // Закрытие модальных окон
+        document.getElementById('cancel_filter_btn').addEventListener('click', function () {
+            filterModal.classList.remove('show');
+        });
 
-                fetch('/api/cameras')
-                    .then(response => response.json())
-                    .then(data => {
-                        data.cameras.forEach(camera => {
-                            const option = document.createElement('option');
-                            option.value = camera.id;
-                            option.textContent = camera.name;
-                            cameraFilter.appendChild(option);
-                        });
+        document.getElementById('cancel_delete_btn').addEventListener('click', function () {
+            deleteModal.classList.remove('show');
+        });
+
+        // Функция обновления списка камер в фильтре
+        function updateCameraFilterList() {
+            const cameraFilter = document.getElementById('camera_filter');
+            cameraFilter.innerHTML = '<option value="">Все камеры</option>';
+
+            fetch('/api/cameras')
+                .then(response => response.json())
+                .then(data => {
+                    data.cameras.forEach(camera => {
+                        const option = document.createElement('option');
+                        option.value = camera.id;
+                        option.textContent = camera.name;
+                        cameraFilter.appendChild(option);
                     });
-            }
+                });
+        }
 
-            // Функция получения отфильтрованных номеров
-            function fetchFilteredPlates(startDate, endDate, plateNumber, cameraId, confidence) {
-                const params = new URLSearchParams();
-                if (startDate) params.append('start_date', startDate);
-                if (endDate) params.append('end_date', endDate);
-                if (plateNumber) params.append('plate_number', plateNumber);
-                if (cameraId) params.append('camera_id', cameraId);
-                if (confidence) params.append('confidence', confidence);
+        // Функция получения отфильтрованных номеров
+        function fetchFilteredPlates(startDate, endDate, plateNumber, cameraId, confidence) {
+            const params = new URLSearchParams();
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (plateNumber) params.append('plate_number', plateNumber);
+            if (cameraId) params.append('camera_id', cameraId);
+            if (confidence) params.append('confidence', confidence);
 
-                fetch(`/api/plates/filter?${params.toString()}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        updatePlatesListWithData(data);
-                    })
-                    .catch(error => {
-                        console.error('Ошибка при загрузке отфильтрованных номеров:', error);
-                        showAlert('Ошибка при загрузке данных', 'danger');
-                    });
-            }
-
-            // Функция экспорта в Excel
-            function exportToExcel(startDate, endDate, plateNumber, cameraId, confidence) {
-                const params = new URLSearchParams();
-                if (startDate) params.append('start_date', startDate);
-                if (endDate) params.append('end_date', endDate);
-                if (plateNumber) params.append('plate_number', plateNumber);
-                if (cameraId) params.append('camera_id', cameraId);
-                if (confidence) params.append('confidence', confidence);
-
-                window.location.href = `/api/plates/export?${params.toString()}`;
-            }
-
-            // Функция удаления записей по дате
-            function deletePlatesBeforeDate(date) {
-                fetch('/api/plates/delete', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ before_date: date })
+            fetch(`/api/plates/filter?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    updatePlatesListWithData(data);
                 })
+                .catch(error => {
+                    console.error('Ошибка при загрузке отфильтрованных номеров:', error);
+                    showAlert('Ошибка при загрузке данных', 'danger');
+                });
+        }
+
+        // Функция экспорта в Excel
+        function exportToExcel(startDate, endDate, plateNumber, cameraId, confidence) {
+            const params = new URLSearchParams();
+            if (startDate) params.append('start_date', startDate);
+            if (endDate) params.append('end_date', endDate);
+            if (plateNumber) params.append('plate_number', plateNumber);
+            if (cameraId) params.append('camera_id', cameraId);
+            if (confidence) params.append('confidence', confidence);
+
+            window.location.href = `/api/plates/export?${params.toString()}`;
+        }
+
+        // Функция удаления записей по дате
+        function deletePlatesBeforeDate(date) {
+            fetch('/api/plates/delete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({before_date: date})
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
@@ -2685,124 +2793,124 @@
                     console.error('Ошибка при удалении записей:', error);
                     showAlert('Ошибка при удалении записей', 'danger');
                 });
-            }
+        }
 
-            // Функция обновления списка номеров с данными
-            function updatePlatesListWithData(data) {
-                const platesList = document.getElementById('plates_list');
-                platesList.innerHTML = '';
+        // Функция обновления списка номеров с данными
+        function updatePlatesListWithData(data) {
+            const platesList = document.getElementById('plates_list');
+            platesList.innerHTML = '';
 
-                if (data.plates && data.plates.length > 0) {
-                    data.plates.forEach(plate => {
-                        platesList.appendChild(createPlateElement(plate));
-                    });
-                } else {
-                    platesList.innerHTML = `
+            if (data.plates && data.plates.length > 0) {
+                data.plates.forEach(plate => {
+                    platesList.appendChild(createPlateElement(plate));
+                });
+            } else {
+                platesList.innerHTML = `
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
                             Нет данных, соответствующих выбранным критериям фильтрации
                         </div>
                     `;
+            }
+        }
+
+        // Обработчики для модального окна настроек
+        document.getElementById('open_settings_btn').addEventListener('click', function () {
+            document.getElementById('settingsModal').classList.add('show');
+        });
+
+        document.getElementById('close_settings_btn').addEventListener('click', function () {
+            document.getElementById('settingsModal').classList.remove('show');
+        });
+
+        // Сохранение настроек
+        document.getElementById('save_settings_modal_btn').addEventListener('click', async function () {
+            const threshold = document.getElementById('threshold-setting').value;
+            const minConfidence = document.getElementById('min_confidence').value;
+            const maxAge = document.getElementById('max_age-setting').value;
+            const emailNotifications = document.getElementById('email_notifications-setting').checked;
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        threshold: parseFloat(threshold),
+                        min_confidence: parseFloat(minConfidence),
+                        max_age: parseInt(maxAge),
+                        email_notifications: emailNotifications
+                    })
+                });
+
+                if (response.ok) {
+                    showAlert('Настройки успешно сохранены', 'success');
+                    document.getElementById('settingsModal').classList.remove('show');
+                } else {
+                    const error = await response.json();
+                    showAlert(error.message || 'Ошибка при сохранении настроек', 'danger');
                 }
+            } catch (error) {
+                showAlert('Ошибка при сохранении настроек', 'danger');
+            }
+        });
+
+        // Обработчики для удаления записей по дате
+        document.getElementById('open_delete_modal_btn').addEventListener('click', function () {
+            document.getElementById('deleteModal').style.display = 'block';
+        });
+
+        document.getElementById('close_delete_modal_btn').addEventListener('click', function () {
+            document.getElementById('deleteModal').style.display = 'none';
+        });
+
+        document.getElementById('confirm_delete_data_btn').addEventListener('click', async function () {
+            const date = document.getElementById('delete_before_date-setting').value;
+            if (!date) {
+                showAlert('Пожалуйста, выберите дату', 'warning');
+                return;
             }
 
-            // Обработчики для модального окна настроек
-            document.getElementById('open_settings_btn').addEventListener('click', function() {
-                document.getElementById('settingsModal').classList.add('show');
-            });
+            if (!confirm('Вы уверены, что хотите удалить все записи за выбранную дату? Это действие нельзя отменить.')) {
+                return;
+            }
 
-            document.getElementById('close_settings_btn').addEventListener('click', function() {
-                document.getElementById('settingsModal').classList.remove('show');
-            });
+            try {
+                const response = await fetch('/api/plates/delete_by_date', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({date: date})
+                });
 
-            // Сохранение настроек
-            document.getElementById('save_settings_modal_btn').addEventListener('click', async function() {
-                const threshold = document.getElementById('threshold-setting').value;
-                const minConfidence = document.getElementById('min_confidence').value;
-                const maxAge = document.getElementById('max_age-setting').value;
-                const emailNotifications = document.getElementById('email_notifications-setting').checked;
-
-                try {
-                    const response = await fetch('/api/settings', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            threshold: parseFloat(threshold),
-                            min_confidence: parseFloat(minConfidence),
-                            max_age: parseInt(maxAge),
-                            email_notifications: emailNotifications
-                        })
-                    });
-
-                    if (response.ok) {
-                        showAlert('Настройки успешно сохранены', 'success');
-                        document.getElementById('settingsModal').classList.remove('show');
-                    } else {
-                        const error = await response.json();
-                        showAlert(error.message || 'Ошибка при сохранении настроек', 'danger');
-                    }
-                } catch (error) {
-                    showAlert('Ошибка при сохранении настроек', 'danger');
+                if (response.ok) {
+                    showAlert('Записи успешно удалены', 'success');
+                    document.getElementById('deleteModal').style.display = 'none';
+                    updatePlatesList(); // Обновляем список записей
+                } else {
+                    const error = await response.json();
+                    showAlert(error.message || 'Ошибка при удалении записей', 'danger');
                 }
-            });
+            } catch (error) {
+                showAlert('Ошибка при удалении записей', 'danger');
+            }
+        });
 
-            // Обработчики для удаления записей по дате
-            document.getElementById('open_delete_modal_btn').addEventListener('click', function() {
-                document.getElementById('deleteModal').style.display = 'block';
-            });
-
-            document.getElementById('close_delete_modal_btn').addEventListener('click', function() {
-                document.getElementById('deleteModal').style.display = 'none';
-            });
-
-            document.getElementById('confirm_delete_data_btn').addEventListener('click', async function() {
-                const date = document.getElementById('delete_before_date-setting').value;
-                if (!date) {
-                    showAlert('Пожалуйста, выберите дату', 'warning');
-                    return;
-                }
-
-                if (!confirm('Вы уверены, что хотите удалить все записи за выбранную дату? Это действие нельзя отменить.')) {
-                    return;
-                }
-
-                try {
-                    const response = await fetch('/api/plates/delete_by_date', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ date: date })
-                    });
-
-                    if (response.ok) {
-                        showAlert('Записи успешно удалены', 'success');
-                        document.getElementById('deleteModal').style.display = 'none';
-                        updatePlatesList(); // Обновляем список записей
-                    } else {
-                        const error = await response.json();
-                        showAlert(error.message || 'Ошибка при удалении записей', 'danger');
-                    }
-                } catch (error) {
-                    showAlert('Ошибка при удалении записей', 'danger');
-                }
-            });
-
-            // Функция для отображения уведомлений
-            function showAlert(message, type) {
-                const alertDiv = document.createElement('div');
-                alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
-                alertDiv.role = 'alert';
-                alertDiv.innerHTML = `
+        // Функция для отображения уведомлений
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
                     ${message}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 `;
-                document.getElementById('alerts-container').appendChild(alertDiv);
-                setTimeout(() => alertDiv.remove(), 5000);
-            }
-        });
-    </script>
+            document.getElementById('alerts-container').appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 5000);
+        }
+    });
+</script>
 </body>
 </html>

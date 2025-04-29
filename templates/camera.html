@@ -332,29 +332,59 @@
                 statusText.textContent = 'Подключение...';
                 statusIndicator.className = 'status-indicator';
 
-                videoFeed.src = `/video_feed/${cameraId}?${Date.now()}`;
+                // Сначала проверяем статус камеры
+                fetch(`/api/camera_status/${cameraId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.connected) {
+                            // Если камера подключена, обновляем статус
+                            statusText.textContent = 'Подключено';
+                            statusIndicator.className = 'status-indicator connected';
+                            cameraOverlay.style.display = 'none';
+                            
+                            // Подключаемся к видеопотоку
+                            videoFeed.src = `/video_feed/${cameraId}?${Date.now()}`;
+                            
+                            // Устанавливаем обработчики событий
+                            videoFeed.onload = function() {
+                                statusText.textContent = 'Подключено';
+                                statusIndicator.className = 'status-indicator connected';
+                                updateTimestamp();
+                            };
 
-                videoFeed.onload = function() {
-                    cameraOverlay.style.display = 'none';
-                    statusText.textContent = 'Подключено';
-                    statusIndicator.className = 'status-indicator connected';
-                    updateTimestamp();
-                };
-
-                videoFeed.onerror = function() {
-                    cameraOverlay.innerHTML = `
-                        <div class="spinner"></div>
-                        <div class="loading-text">Ошибка подключения к камере</div>
-                        <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
-                            <i class="fas fa-sync-alt"></i> Повторить попытку
-                        </button>
-                    `;
-
-                    document.getElementById('retry_btn').addEventListener('click', connectToCamera);
-
-                    statusText.textContent = 'Ошибка подключения';
-                    statusIndicator.className = 'status-indicator';
-                };
+                            videoFeed.onerror = function() {
+                                statusText.textContent = 'Ошибка видеопотока';
+                                statusIndicator.className = 'status-indicator';
+                                cameraOverlay.style.display = 'flex';
+                                cameraOverlay.innerHTML = `
+                                    <div class="spinner"></div>
+                                    <div class="loading-text">Ошибка видеопотока</div>
+                                    <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
+                                        <i class="fas fa-sync-alt"></i> Повторить попытку
+                                    </button>
+                                `;
+                                document.getElementById('retry_btn').addEventListener('click', connectToCamera);
+                            };
+                        } else {
+                            // Если камера не подключена, показываем ошибку
+                            statusText.textContent = 'Камера не подключена';
+                            statusIndicator.className = 'status-indicator';
+                            cameraOverlay.style.display = 'flex';
+                            cameraOverlay.innerHTML = `
+                                <div class="spinner"></div>
+                                <div class="loading-text">Камера не подключена</div>
+                                <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
+                                    <i class="fas fa-sync-alt"></i> Повторить попытку
+                                </button>
+                            `;
+                            document.getElementById('retry_btn').addEventListener('click', connectToCamera);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка проверки статуса:', error);
+                        statusText.textContent = 'Ошибка проверки статуса';
+                        statusIndicator.className = 'status-indicator';
+                    });
             }
 
             // Функция отображения ошибки
@@ -589,12 +619,32 @@
                 fullscreenBtn.title = isFullscreen ? 'Выйти из полноэкранного режима' : 'Полноэкранный режим';
             }
 
-            // Обновление видеопотока каждые 5 минут (для предотвращения кеширования)
+            // Добавляем периодическую проверку статуса
             setInterval(() => {
-                if (videoFeed.src) {
-                    videoFeed.src = `/video_feed/${cameraId}?${Date.now()}`;
-                }
-            }, 300000);
+                fetch(`/api/camera_status/${cameraId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.connected) {
+                            statusText.textContent = 'Подключено';
+                            statusIndicator.className = 'status-indicator connected';
+                        } else {
+                            statusText.textContent = 'Отключено';
+                            statusIndicator.className = 'status-indicator';
+                            cameraOverlay.style.display = 'flex';
+                            cameraOverlay.innerHTML = `
+                                <div class="spinner"></div>
+                                <div class="loading-text">Камера отключена</div>
+                                <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
+                                    <i class="fas fa-sync-alt"></i> Повторить попытку
+                                </button>
+                            `;
+                            document.getElementById('retry_btn').addEventListener('click', connectToCamera);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка проверки статуса:', error);
+                    });
+            }, 5000); // Проверяем каждые 5 секунд
         });
     </script>
 </body>
