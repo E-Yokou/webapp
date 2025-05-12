@@ -49,6 +49,7 @@ DEFAULT_CONFIG = {
 
 camera_states = {}
 
+
 def load_config():
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r') as f:
@@ -72,23 +73,40 @@ stop_event = threading.Event()
 def save_config(config):
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=4)
+    logging.info("Конфигурация успешно сохранена")
 
 
 def init_db():
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS recognized_plates
-                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  plate_text TEXT NOT NULL,
-                  camera_id INTEGER,
-                  camera_name TEXT,
-                  score REAL,
-                  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                  image BLOB)''')
+                 (
+                     id
+                     INTEGER
+                     PRIMARY
+                     KEY
+                     AUTOINCREMENT,
+                     plate_text
+                     TEXT
+                     NOT
+                     NULL,
+                     camera_id
+                     INTEGER,
+                     camera_name
+                     TEXT,
+                     score
+                     REAL,
+                     timestamp
+                     DATETIME
+                     DEFAULT
+                     CURRENT_TIMESTAMP,
+                     image
+                     BLOB
+                 )''')
 
     # Индекс для быстрой проверки дубликатов
-    c.execute('''CREATE INDEX IF NOT EXISTS idx_plate_text_time 
-                 ON recognized_plates(plate_text, timestamp)''')
+    c.execute('''CREATE INDEX IF NOT EXISTS idx_plate_text_time
+        ON recognized_plates(plate_text, timestamp)''')
 
     conn.commit()
     conn.close()
@@ -99,11 +117,32 @@ def init_db():
 
     # Создаем таблицу с нужными колонками
     c.execute('''CREATE TABLE IF NOT EXISTS users
-                (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                 username TEXT UNIQUE NOT NULL,
-                 password TEXT NOT NULL,
-                 role TEXT DEFAULT 'user',
-                 created_at DATETIME DEFAULT (datetime('now')))''')
+    (
+        id
+        INTEGER
+        PRIMARY
+        KEY
+        AUTOINCREMENT,
+        username
+        TEXT
+        UNIQUE
+        NOT
+        NULL,
+        password
+        TEXT
+        NOT
+        NULL,
+        role
+        TEXT
+        DEFAULT
+        'user',
+        created_at
+        DATETIME
+        DEFAULT (
+        datetime
+                 (
+        'now'
+                 )))''')
 
     # Создаем администратора по умолчанию, если его нет
     c.execute("SELECT COUNT(*) FROM users WHERE username = 'admin'")
@@ -127,10 +166,12 @@ def insert_plate_data(plate_text, image, camera_id, camera_name, score):
     # Проверяем, был ли такой номер зарегистрирован в последние 5 минут
     five_minutes_ago = current_time - timedelta(minutes=5)
     c.execute("""
-        SELECT id FROM recognized_plates 
-        WHERE plate_text = ? AND timestamp >= ?
-        LIMIT 1
-    """, (plate_text, five_minutes_ago.strftime('%Y-%m-%d %H:%M:%S')))
+              SELECT id
+              FROM recognized_plates
+              WHERE plate_text = ?
+                AND timestamp >= ?
+                  LIMIT 1
+              """, (plate_text, five_minutes_ago.strftime('%Y-%m-%d %H:%M:%S')))
 
     if c.fetchone():
         conn.close()
@@ -144,16 +185,17 @@ def insert_plate_data(plate_text, image, camera_id, camera_name, score):
 
     # Вставляем новую запись
     c.execute("""
-        INSERT INTO recognized_plates 
-        (plate_text, camera_id, camera_name, score, timestamp, image) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (plate_text, camera_id, camera_name, score,
-          current_time.strftime('%Y-%m-%d %H:%M:%S'), image))
+              INSERT INTO recognized_plates
+                  (plate_text, camera_id, camera_name, score, timestamp, image)
+              VALUES (?, ?, ?, ?, ?, ?)
+              """, (plate_text, camera_id, camera_name, score,
+                    current_time.strftime('%Y-%m-%d %H:%M:%S'), image))
 
     conn.commit()
     conn.close()
     logging.info(f"Новый номер {plate_text} успешно записан")
     return True
+
 
 def get_moscow_time():
     return datetime.now(pytz.timezone('Europe/Moscow'))
@@ -164,11 +206,15 @@ def get_recent_plates(limit=100):
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
     c.execute("""
-        SELECT id, plate_text, camera_id, camera_name, score, 
-               datetime(timestamp, 'localtime') as local_timestamp 
-        FROM recognized_plates 
-        ORDER BY timestamp DESC 
-        LIMIT ?""", (limit,))
+              SELECT id,
+                     plate_text,
+                     camera_id,
+                     camera_name,
+                     score,
+                     datetime(timestamp, 'localtime') as local_timestamp
+              FROM recognized_plates
+              ORDER BY timestamp DESC
+                  LIMIT ?""", (limit,))
 
     plates = []
     for row in c.fetchall():
@@ -182,6 +228,7 @@ def get_recent_plates(limit=100):
         })
     conn.close()
     return plates
+
 
 def get_plate_count_last_24h():
     """Возвращает количество распознанных номеров за последние 24 часа"""
@@ -547,10 +594,14 @@ def process_frame(frame, camera_id=None):
         logging.error(f"Error in process_frame: {e}")
         return frame
 
+
 def is_valid_camera_url(url):
     if not url:
         return False
-    return url.startswith(('rtsp://', 'http://', 'https://'))
+    # Разрешаем обычные потоки и .html-страницы
+    if url.startswith(('rtsp://', 'http://', 'https://')):
+        return True
+    return False
 
 
 @app.route('/api/camera/<int:camera_id>/reconnect', methods=['POST'])
@@ -873,12 +924,12 @@ def recent_plates():
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
     c.execute('''
-        SELECT plate_text, COUNT(*) as dup_count 
-        FROM recognized_plates 
-        WHERE timestamp >= datetime('now', '-24 hours')
-        GROUP BY plate_text
-        HAVING dup_count > 1
-    ''')
+              SELECT plate_text, COUNT(*) as dup_count
+              FROM recognized_plates
+              WHERE timestamp >= datetime('now', '-24 hours')
+              GROUP BY plate_text
+              HAVING dup_count > 1
+              ''')
     duplicates = {row[0]: row[1] for row in c.fetchall()}
     conn.close()
 
@@ -1046,6 +1097,7 @@ def get_cameras():
     """Возвращает список камер (доступно всем авторизованным пользователям)"""
     return jsonify({'cameras': config['cameras']})
 
+
 @app.route('/api/cameras', methods=['POST', 'DELETE'])
 @admin_required
 def manage_cameras():
@@ -1084,6 +1136,7 @@ def manage_cameras():
 
         return jsonify({'status': 'success'})
 
+
 @app.route('/api/cameras/status')
 def get_cameras_status():
     statuses = {}
@@ -1094,12 +1147,13 @@ def get_cameras_status():
         }
     return jsonify(statuses)
 
+
 @app.route('/api/camera_status/<int:camera_id>')
 @login_required
 def get_camera_status(camera_id):
     """Возвращает текущий статус камеры"""
     status = camera_states.get(camera_id, {'connected': False})
-    
+
     # Проверяем реальное состояние камеры
     if camera_id in camera_instances:
         instance = camera_instances[camera_id]
@@ -1134,11 +1188,13 @@ def get_camera_status(camera_id):
 
     return jsonify(status)
 
+
 def is_camera_alive(camera_id):
     if camera_id not in camera_instances:
         return False
     cap = camera_instances[camera_id].get('cap')
     return cap is not None and cap.isOpened()
+
 
 @app.route('/api/connect', methods=['POST'])
 @admin_required
@@ -1157,6 +1213,10 @@ def connect_camera():
 
     if not is_valid_camera_url(camera['url']):
         return jsonify({'status': 'error', 'message': 'Invalid camera URL'}), 400
+
+    # Если это .html-камера, не запускаем обработку потока
+    if camera['url'].endswith('.html'):
+        return jsonify({'status': 'success', 'camera': camera})
 
     # Если камера в словаре, но не работает - очищаем
     if data['id'] in camera_instances:
@@ -1243,6 +1303,7 @@ def main_video_processing():
         else:
             time.sleep(0.1)
 
+
 def role_required(role):
     def decorator(f):
         @wraps(f)
@@ -1250,18 +1311,23 @@ def role_required(role):
             if session.get('role') != role:
                 return jsonify({'status': 'error', 'message': 'Недостаточно прав'}), 403
             return f(*args, **kwargs)
+
         return decorated_function
+
     return decorator
+
 
 @app.errorhandler(403)
 def forbidden(e):
     return jsonify({'status': 'error', 'message': 'Недостаточно прав для выполнения этого действия'}), 403
+
 
 @app.before_request
 def check_auth():
     allowed_routes = ['login', 'register', 'static']
     if request.endpoint not in allowed_routes and 'user_id' not in session:
         return redirect(url_for('login'))
+
 
 @app.route('/api/plates/filter')
 @login_required
@@ -1277,11 +1343,15 @@ def get_filtered_plates():
     c = conn.cursor()
 
     query = """
-        SELECT id, plate_text, camera_id, camera_name, score, 
-               datetime(timestamp, 'localtime') as local_timestamp 
-        FROM recognized_plates 
-        WHERE 1=1
-    """
+            SELECT id, \
+                   plate_text, \
+                   camera_id, \
+                   camera_name, \
+                   score,
+                   datetime(timestamp, 'localtime') as local_timestamp
+            FROM recognized_plates
+            WHERE 1 = 1 \
+            """
     params = []
 
     if start_date:
@@ -1331,11 +1401,13 @@ def export_plates():
     c = conn.cursor()
 
     query = """
-        SELECT plate_text, camera_name, score, 
-               datetime(timestamp, 'localtime') as local_timestamp 
-        FROM recognized_plates 
-        WHERE 1=1
-    """
+            SELECT plate_text, \
+                   camera_name, \
+                   score,
+                   datetime(timestamp, 'localtime') as local_timestamp
+            FROM recognized_plates
+            WHERE 1 = 1 \
+            """
     params = []
 
     if start_date:
@@ -1384,7 +1456,7 @@ def export_plates():
     for row, plate in enumerate(plates, start=1):
         worksheet.write(row, 0, plate[0], cell_format)  # Номер
         worksheet.write(row, 1, plate[1], cell_format)  # Камера
-        worksheet.write(row, 2, f"{plate[2]*100:.1f}%", cell_format)  # Уверенность
+        worksheet.write(row, 2, f"{plate[2] * 100:.1f}%", cell_format)  # Уверенность
         worksheet.write(row, 3, plate[3], cell_format)  # Дата и время
 
     # Автоматическая ширина столбцов
@@ -1510,6 +1582,7 @@ def cleanup_data():
             'message': f"Internal server error: {str(e)}"
         }), 500
 
+
 @app.route('/api/stats')
 @login_required
 def get_system_stats():
@@ -1538,31 +1611,33 @@ def get_system_stats():
         'db_size': round(db_size, 2)
     })
 
+
 @app.route('/api/stats/hourly')
 @login_required
 def get_hourly_stats():
     """Возвращает статистику по часам за последние 24 часа"""
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
-    
+
     # Получаем данные по часам
     c.execute("""
-        SELECT strftime('%H', timestamp) as hour, COUNT(*) as count
-        FROM recognized_plates
-        WHERE timestamp >= datetime('now', '-24 hours')
-        GROUP BY hour
-        ORDER BY hour
-    """)
-    
+              SELECT strftime('%H', timestamp) as hour, COUNT(*) as count
+              FROM recognized_plates
+              WHERE timestamp >= datetime('now', '-24 hours')
+              GROUP BY hour
+              ORDER BY hour
+              """)
+
     # Создаем массив для всех часов
     hourly_data = [0] * 24
     for row in c.fetchall():
         hour = int(row[0])
         count = row[1]
         hourly_data[hour] = count
-    
+
     conn.close()
     return jsonify({'hourly_data': hourly_data})
+
 
 @app.route('/api/stats/cameras')
 @login_required
@@ -1570,16 +1645,16 @@ def get_camera_stats():
     """Возвращает статистику по камерам"""
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
-    
+
     # Получаем данные по камерам
     c.execute("""
-        SELECT camera_name, COUNT(*) as count, AVG(score) as avg_score
-        FROM recognized_plates
-        WHERE timestamp >= datetime('now', '-24 hours')
-        GROUP BY camera_name
-        ORDER BY count DESC
-    """)
-    
+              SELECT camera_name, COUNT(*) as count, AVG(score) as avg_score
+              FROM recognized_plates
+              WHERE timestamp >= datetime('now', '-24 hours')
+              GROUP BY camera_name
+              ORDER BY count DESC
+              """)
+
     cameras = []
     for row in c.fetchall():
         cameras.append({
@@ -1587,9 +1662,67 @@ def get_camera_stats():
             'count': row[1],
             'avg_score': round(row[2] * 100, 1)
         })
-    
+
     conn.close()
     return jsonify({'cameras': cameras})
+
+
+@app.route('/api/cameras', methods=['PUT'])
+@admin_required
+def update_camera():
+    data = request.json
+    if 'id' not in data:
+        return jsonify({'status': 'error', 'message': 'Missing camera id'}), 400
+
+    # Находим индекс камеры в списке
+    camera_index = None
+    for i, cam in enumerate(config['cameras']):
+        if cam['id'] == data['id']:
+            camera_index = i
+            break
+
+    if camera_index is None:
+        return jsonify({'status': 'error', 'message': 'Camera not found'}), 404
+
+    # Проверяем URL на дубликаты (исключая текущую камеру)
+    new_url = data.get('url')
+    if new_url:
+        for cam in config['cameras']:
+            if cam['url'] == new_url and cam['id'] != data['id']:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Камера с таким URL уже существует'
+                }), 400
+
+    # Обновляем только существующую камеру (не создаём новую)
+    if 'name' in data:
+        config['cameras'][camera_index]['name'] = data['name']
+    if 'url' in data:
+        config['cameras'][camera_index]['url'] = data['url']
+    if 'location' in data:
+        config['cameras'][camera_index]['location'] = data.get('location', '')
+
+    save_config(config)
+
+    # Переподключаем камеру если она активна
+    if data['id'] in camera_instances:
+        instance = camera_instances[data['id']]
+        instance['stop_event'].set()
+        time.sleep(0.5)
+
+        stop_event = threading.Event()
+        thread = threading.Thread(
+            target=camera_processing,
+            args=(data['id'], config['cameras'][camera_index]['url'], stop_event),
+            daemon=True
+        )
+        thread.start()
+
+    return jsonify({
+        'status': 'success',
+        'camera': config['cameras'][camera_index],
+        'message': 'Camera updated successfully'
+    })
 
 @app.route('/api/stats/top_plates')
 @login_required
@@ -1597,27 +1730,28 @@ def get_top_plates():
     """Возвращает топ часто встречающихся номеров"""
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
-    
+
     # Получаем топ номеров
     c.execute("""
-        SELECT plate_text, COUNT(*) as count
-        FROM recognized_plates
-        WHERE timestamp >= datetime('now', '-24 hours')
-        GROUP BY plate_text
-        HAVING count > 1
-        ORDER BY count DESC
-        LIMIT 10
-    """)
-    
+              SELECT plate_text, COUNT(*) as count
+              FROM recognized_plates
+              WHERE timestamp >= datetime('now', '-24 hours')
+              GROUP BY plate_text
+              HAVING count > 1
+              ORDER BY count DESC
+                  LIMIT 10
+              """)
+
     top_plates = []
     for row in c.fetchall():
         top_plates.append({
             'plate': row[0],
             'count': row[1]
         })
-    
+
     conn.close()
     return jsonify({'top_plates': top_plates})
+
 
 if __name__ == '__main__':
     # Инициализация базы данных

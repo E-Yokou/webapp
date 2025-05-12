@@ -304,21 +304,58 @@ def draw_license_plate_text(image, text, position, font_size=30, bg_color=(255, 
         return image
 
 
-def license_complies_format(text, recognition_threshold=0.85):
-    """Проверка формата номера (Российский стандарт)"""
-    # car
-    if len(text) == 9 and text[0].isalpha() and text[1:4].isdigit() and text[4:6].isalpha() and text[6:].isdigit():
-        return True
-    # car
-    elif len(text) == 8 and text[0].isalpha() and text[1:4].isdigit() and text[4:6].isalpha() and text[6:].isdigit():
-        return True
-    # trailer
-    elif len(text) == 8 and text[0:2].isalpha() and text[2:6].isdigit() and text[6:].isdigit():
-        return True
-    # trailer
-    elif len(text) == 9 and text[0:2].isalpha() and text[2:6].isdigit() and text[6:].isdigit():
-        return True
-    return False
+def license_complies_format(text, region='ru', recognition_threshold=0.85):
+    """Проверка формата номера по региону (Россия, Казахстан, Беларусь, Европа)"""
+    if region == 'ru':
+        # Российский ГОСТ: A111AA197 или A111AA77, прицепы и т.д.
+        if len(text) == 9 and text[0].isalpha() and text[1:4].isdigit() and text[4:6].isalpha() and text[6:].isdigit():
+            return True
+        elif len(text) == 8 and text[0].isalpha() and text[1:4].isdigit() and text[4:6].isalpha() and text[6:].isdigit():
+            return True
+        elif len(text) == 8 and text[0:2].isalpha() and text[2:6].isdigit() and text[6:].isdigit():
+            return True
+        elif len(text) == 9 and text[0:2].isalpha() and text[2:6].isdigit() and text[6:].isdigit():
+            return True
+        return False
+    elif region == 'kz':
+        # Казахстан: 111AAA01, A111AA01, 111AAA, A111AA
+        if len(text) == 8 and text[0:3].isdigit() and text[3:6].isalpha() and text[6:8].isdigit():
+            return True
+        elif len(text) == 8 and text[0].isalpha() and text[1:4].isdigit() and text[4:6].isalpha() and text[6:8].isdigit():
+            return True
+        elif len(text) == 6 and text[0:3].isdigit() and text[3:6].isalpha():
+            return True
+        elif len(text) == 6 and text[0].isalpha() and text[1:4].isdigit() and text[4:6].isalpha():
+            return True
+        return False
+    elif region == 'by':
+        # Беларусь: 1111AA-1, 1111AA1, 1111AA-7
+        if len(text) == 7 and text[0:4].isdigit() and text[4:6].isalpha() and text[6].isdigit():
+            return True
+        elif len(text) == 8 and text[0:4].isdigit() and text[4:6].isalpha() and text[6] == '-' and text[7].isdigit():
+            return True
+        return False
+    elif region == 'eu':
+        # Европейский формат: ABC1234, AB123CD, 1234ABC, 123ABC45 и т.д.
+        # Попробуем несколько популярных шаблонов
+        if len(text) == 7:
+            # ABC1234, 3 буквы + 4 цифры
+            if text[0:3].isalpha() and text[3:7].isdigit():
+                return True
+            # 1234ABC, 4 цифры + 3 буквы
+            if text[0:4].isdigit() and text[4:7].isalpha():
+                return True
+            # AB123CD, 2 буквы + 3 цифры + 2 буквы
+            if text[0:2].isalpha() and text[2:5].isdigit() and text[5:7].isalpha():
+                return True
+        elif len(text) == 8:
+            # 123ABC45, 3 цифры + 3 буквы + 2 цифры
+            if text[0:3].isdigit() and text[3:6].isalpha() and text[6:8].isdigit():
+                return True
+        return False
+    else:
+        # По умолчанию — российский формат
+        return license_complies_format(text, region='ru')
 
 
 def format_license(text):
@@ -334,46 +371,74 @@ def format_license(text):
     return license_plate_
 
 
-def read_license_plate(license_plate_crop):
-    """Улучшенное распознавание номера с проверкой формата"""
-    try:
-        # Предварительная обработка изображения
-        processed_img = preprocess_image(license_plate_crop)
+def replace_similar_letters_ru(text):
+    """Заменяет похожие латинские буквы на кириллические и наоборот для номеров РФ"""
+    lat_to_cyr = {
+        'A': 'А', 'B': 'В', 'E': 'Е', 'K': 'К', 'M': 'М', 'H': 'Н', 'O': 'О', 'P': 'Р',
+        'C': 'С', 'T': 'Т', 'Y': 'У', 'X': 'Х',
+        'a': 'А', 'b': 'В', 'e': 'Е', 'k': 'К', 'm': 'М', 'h': 'Н', 'o': 'О', 'p': 'Р',
+        'c': 'С', 't': 'Т', 'y': 'У', 'x': 'Х',
+        '0': 'О',  # иногда 0 как буква О
+    }
+    cyr_to_lat = {
+        'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P',
+        'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X',
+        'а': 'A', 'в': 'B', 'е': 'E', 'к': 'K', 'м': 'M', 'н': 'H', 'о': 'O', 'р': 'P',
+        'с': 'C', 'т': 'T', 'у': 'Y', 'х': 'X',
+    }
+    # Сначала латиницу в кириллицу
+    text_cyr = ''.join(lat_to_cyr.get(ch, ch) for ch in text)
+    # Потом кириллицу в латиницу (если вдруг)
+    text_lat = ''.join(cyr_to_lat.get(ch, ch) for ch in text)
+    return text_cyr, text_lat
 
-        # Распознавание текста
+
+def read_license_plate(license_plate_crop, region='ru'):
+    """Улучшенное распознавание номера с проверкой формата и поддержкой разных стран. Для РФ: сначала оригинал, потом замена похожих букв."""
+    try:
+        processed_img = preprocess_image(license_plate_crop)
         detections = reader.readtext(
             processed_img,
             decoder='greedy',
             batch_size=1,
             detail=1,
-            # allowlist='АВЕКМНОРСТУХ0123456789',
             paragraph=False
         )
-
         best_text = None
         best_score = 0
-
         for detection in detections:
             bbox, text, score = detection
             text = text.upper().replace(' ', '').replace('-', '')
-
-            # Удаляем лишние символы
             text = ''.join(c for c in text if c.isalnum())
-
-            if len(text) < 5:  # Минимальная длина номера
+            if len(text) < 5:
                 continue
-
-            # Проверка формата номера
-            formatted_text = format_license(text)
-            if not license_complies_format(formatted_text):
-                continue
-
-            if score > best_score:
-                best_text = formatted_text
-                best_score = score
-
+            # Для России: пробуем оригинал, потом замену лат->кир, потом кир->лат
+            if region == 'ru':
+                # 1. Оригинал
+                if license_complies_format(text, region=region):
+                    if score > best_score:
+                        best_text = text
+                        best_score = score
+                # 2. Латиница в кириллицу
+                text_cyr, text_lat = replace_similar_letters_ru(text)
+                if license_complies_format(text_cyr, region=region):
+                    if score > best_score:
+                        best_text = text_cyr
+                        best_score = score
+                # 3. Кириллица в латиницу (редко, но вдруг)
+                if license_complies_format(text_lat, region=region):
+                    if score > best_score:
+                        best_text = text_lat
+                        best_score = score
+            else:
+                # Для других стран — стандартная логика
+                formatted_text = format_license(text)
+                if not license_complies_format(formatted_text, region=region):
+                    continue
+                if score > best_score:
+                    best_text = formatted_text
+                    best_score = score
         return best_text, best_score if best_text else (None, 0.0)
-
     except Exception as e:
         logging.error(f"Error in read_license_plate: {e}")
         return None, 0.0

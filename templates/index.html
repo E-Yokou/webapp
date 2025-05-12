@@ -1070,6 +1070,265 @@
         body.admin .admin-controls {
             display: flex;
         }
+
+        /* Стили для таблицы пользователей */
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: var(--white);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .users-table th, .users-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .users-table th {
+            background-color: var(--primary);
+            color: var(--white);
+            font-weight: 500;
+            position: sticky;
+            top: 0;
+        }
+
+        .users-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .users-table tr:hover {
+            background-color: rgba(44, 62, 80, 0.03);
+        }
+
+        /* Стили для статусов пользователей */
+        .user-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: rgba(39, 174, 96, 0.1);
+            color: var(--success);
+        }
+
+        .status-inactive {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+        }
+
+        /* Стили для действий с пользователями */
+        .user-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+        }
+
+        .edit-btn {
+            background-color: rgba(243, 156, 18, 0.1);
+            color: var(--warning);
+        }
+
+        .edit-btn:hover {
+            background-color: rgba(243, 156, 18, 0.2);
+        }
+
+        .delete-btn {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--danger);
+        }
+
+        .delete-btn:hover {
+            background-color: rgba(231, 76, 60, 0.2);
+        }
+
+        .reset-pwd-btn {
+            background-color: rgba(52, 152, 219, 0.1);
+            color: var(--secondary);
+        }
+
+        .reset-pwd-btn:hover {
+            background-color: rgba(52, 152, 219, 0.2);
+        }
+
+        /* Стили для поиска и фильтрации */
+        .users-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 15px;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 15px 10px 40px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .search-input:focus {
+            border-color: var(--secondary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .filter-btn {
+            background-color: var(--light);
+            color: var(--dark);
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
+        }
+
+        .filter-btn:hover {
+            background-color: #d5dbdb;
+        }
+
+        .filter-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .filter-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: var(--white);
+            min-width: 200px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            z-index: 1;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .filter-dropdown:hover .filter-content {
+            display: block;
+        }
+
+        .filter-option {
+            margin-bottom: 10px;
+        }
+
+        .filter-option label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        /* Стили для пагинации */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .page-item {
+            list-style: none;
+        }
+
+        .page-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 6px;
+            background-color: var(--white);
+            color: var(--dark);
+            text-decoration: none;
+            transition: var(--transition);
+            border: 1px solid #eee;
+        }
+
+        .page-link:hover {
+            background-color: var(--light);
+        }
+
+        .page-link.active {
+            background-color: var(--secondary);
+            color: var(--white);
+            border-color: var(--secondary);
+        }
+
+        /* Адаптивные стили */
+        @media (max-width: 768px) {
+            .users-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .users-table {
+                display: block;
+                overflow-x: auto;
+            }
+
+            .user-actions {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+        }
+
+        /* Анимации */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-row {
+            animation: fadeIn 0.3s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -1130,18 +1389,18 @@
                     <span>Управление пользователями</span>
                 </a>
             </li>
-            <li class="menu-item">
-                <a href="#" class="menu-link" data-section="stats">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Статистика</span>
-                </a>
-            </li>
-            <li class="menu-item">
-                <a href="#" class="menu-link" data-section="history">
-                    <i class="fas fa-history"></i>
-                    <span>История событий</span>
-                </a>
-            </li>
+<!--            <li class="menu-item">-->
+<!--                <a href="#" class="menu-link" data-section="stats">-->
+<!--                    <i class="fas fa-chart-line"></i>-->
+<!--                    <span>Статистика</span>-->
+<!--                </a>-->
+<!--            </li>-->
+<!--            <li class="menu-item">-->
+<!--                <a href="#" class="menu-link" data-section="history">-->
+<!--                    <i class="fas fa-history"></i>-->
+<!--                    <span>История событий</span>-->
+<!--                </a>-->
+<!--            </li>-->
         </ul>
     </aside>
 
@@ -1208,16 +1467,103 @@
         <div id="users-section" class="content-section" style="display: none;">
             <div class="page-header">
                 <h1 class="page-title">
-                    <i class="fas fa-users"></i> Управление пользователями
+                    <i class="fas fa-users-cog"></i> Управление пользователями
                 </h1>
                 <div class="page-actions">
                     <button class="btn btn-primary" id="add_user_btn">
                         <i class="fas fa-user-plus"></i> Добавить пользователя
                     </button>
+                    <button class="btn btn-light" id="refresh_users_btn">
+                        <i class="fas fa-sync-alt"></i> Обновить
+                    </button>
                 </div>
             </div>
-            <div class="users-list" id="users_list">
-                <!-- Список пользователей будет добавлен динамически -->
+
+            <div class="card">
+                <div class="card-body">
+                    <div class="users-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" class="search-input" id="users_search"
+                                   placeholder="Поиск пользователей...">
+                        </div>
+
+                        <div class="filter-dropdown">
+                            <button class="filter-btn">
+                                <i class="fas fa-filter"></i>
+                                Фильтры
+                            </button>
+                            <div class="filter-content">
+                                <div class="filter-option">
+                                    <input type="checkbox" id="filter_active" checked>
+                                    <label for="filter_active">Активные</label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="checkbox" id="filter_inactive" checked>
+                                    <label for="filter_inactive">Неактивные</label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="checkbox" id="filter_admins" checked>
+                                    <label for="filter_admins">Администраторы</label>
+                                </div>
+                                <div class="filter-option">
+                                    <input type="checkbox" id="filter_users" checked>
+                                    <label for="filter_users">Пользователи</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="users-table">
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя пользователя</th>
+                                <th>Роль</th>
+                                <th>Статус</th>
+                                <th>Дата создания</th>
+                                <th>Последний вход</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody id="users_list">
+                            <!-- Список пользователей будет добавлен динамически -->
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <div class="loading-container">
+                                        <div class="spinner"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination">
+                        <ul>
+                            <li class="page-item">
+                                <a href="#" class="page-link" id="prev_page">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link active">1</a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link">2</a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link">3</a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link" id="next_page">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1253,7 +1599,7 @@
                         <div class="form-group">
                             <label for="region-setting" class="form-label">
                                 <i class="fas fa-globe"></i>
-                                Регион номеров
+                                Регион номеров (В разработке)
                             </label>
                             <select id="region-setting" class="form-select">
                                 <option value="ru">Россия</option>
@@ -1269,7 +1615,7 @@
                 <div class="settings-card">
                     <div class="settings-card-header">
                         <i class="fas fa-tools"></i>
-                        <h2>Дополнительные параметры</h2>
+                        <h2>Дополнительные параметры (В разработке)</h2>
                     </div>
                     <div class="settings-card-body">
                         <div class="form-group">
@@ -1388,31 +1734,87 @@
 
         <!-- Модальное окно для добавления/редактирования пользователя -->
         <div class="modal" id="userModal">
-            <div class="modal-dialog">
+            <div class="modal-dialog" style="max-width: 500px;">
                 <div class="modal-header">
                     <h3 class="modal-title" id="userModalTitle">Добавить пользователя</h3>
                     <button class="modal-close">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="modal_username" class="form-label">Имя пользователя</label>
-                        <input type="text" id="modal_username" class="form-control">
+                        <label for="modal_username" class="form-label">
+                            <i class="fas fa-user"></i> Имя пользователя
+                        </label>
+                        <input type="text" id="modal_username" class="form-control"
+                               placeholder="Введите имя пользователя">
                     </div>
                     <div class="form-group">
-                        <label for="modal_password" class="form-label">Пароль</label>
-                        <input type="password" id="modal_password" class="form-control">
+                        <label for="modal_password" class="form-label">
+                            <i class="fas fa-lock"></i> Пароль
+                        </label>
+                        <input type="password" id="modal_password" class="form-control" placeholder="Введите пароль">
+                        <small class="form-text">Пароль должен содержать не менее 8 символов</small>
                     </div>
                     <div class="form-group">
-                        <label for="modal_role" class="form-label">Роль</label>
+                        <label for="modal_password_confirm" class="form-label">
+                            <i class="fas fa-lock"></i> Подтверждение пароля
+                        </label>
+                        <input type="password" id="modal_password_confirm" class="form-control"
+                               placeholder="Повторите пароль">
+                    </div>
+                    <div class="form-group">
+                        <label for="modal_role" class="form-label">
+                            <i class="fas fa-user-tag"></i> Роль
+                        </label>
                         <select id="modal_role" class="form-control">
                             <option value="user">Пользователь</option>
                             <option value="admin">Администратор</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="modal_status" class="form-label">
+                            <i class="fas fa-power-off"></i> Статус
+                        </label>
+                        <select id="modal_status" class="form-control">
+                            <option value="active">Активный</option>
+                            <option value="inactive">Неактивный</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-light" id="cancel_user_btn">Отмена</button>
-                    <button class="btn btn-primary" id="save_user_btn">Сохранить</button>
+                    <button class="btn btn-primary" id="save_user_btn">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Модальное окно для сброса пароля -->
+        <div class="modal" id="resetPasswordModal">
+            <div class="modal-dialog" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3 class="modal-title">Сброс пароля</h3>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Вы собираетесь сбросить пароль для пользователя <strong id="reset_username"></strong>.
+                        Пользователю будет необходимо установить новый пароль при следующем входе.
+                    </div>
+                    <div class="form-group">
+                        <label for="new_password" class="form-label">
+                            <i class="fas fa-lock"></i> Новый пароль (необязательно)
+                        </label>
+                        <input type="password" id="new_password" class="form-control"
+                               placeholder="Оставьте пустым для автоматической генерации">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-light" id="cancel_reset_btn">Отмена</button>
+                    <button class="btn btn-danger" id="confirm_reset_btn">
+                        <i class="fas fa-key"></i> Сбросить пароль
+                    </button>
                 </div>
             </div>
         </div>
@@ -1540,6 +1942,491 @@
 </div>
 
 <script>
+    // Текущая страница и фильтры
+    let currentPage = 1;
+    const usersPerPage = 10;
+    let currentFilters = {
+        active: true,
+        inactive: true,
+        admins: true,
+        users: true,
+        search: ''
+    };
+
+    // Загрузка списка пользователей
+    async function loadUsers(page = 1, filters = currentFilters) {
+        currentPage = page;
+        currentFilters = filters;
+
+        const usersList = document.getElementById('users_list');
+        usersList.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center">
+                    <div class="loading-container">
+                        <div class="spinner"></div>
+                    </div>
+                </td>
+            </tr>
+        `;
+
+        try {
+            // Формируем параметры запроса
+            const params = new URLSearchParams();
+            params.append('page', page);
+            params.append('per_page', usersPerPage);
+
+            if (filters.search) params.append('search', filters.search);
+            if (!filters.active) params.append('exclude_inactive', 'true');
+            if (!filters.inactive) params.append('exclude_active', 'true');
+            if (!filters.admins) params.append('exclude_admins', 'true');
+            if (!filters.users) params.append('exclude_users', 'true');
+
+            const response = await fetch(`/api/users?${params.toString()}`);
+            const data = await response.json();
+
+            if (data.users && data.users.length > 0) {
+                usersList.innerHTML = '';
+
+                data.users.forEach(user => {
+                    const row = document.createElement('tr');
+                    row.className = 'user-row';
+
+                    // Форматируем даты
+                    const createdAt = new Date(user.created_at);
+                    const lastLogin = user.last_login ? new Date(user.last_login) : null;
+
+                    row.innerHTML = `
+                        <td>${user.id}</td>
+                        <td>
+                            <div class="user-info">
+                                <div class="user-avatar-sm">${user.username.charAt(0).toUpperCase()}</div>
+                                <div>
+                                    <div class="user-name">${user.username}</div>
+                                    <div class="user-email">${user.email || 'Нет email'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge ${user.role === 'admin' ? 'badge-primary' : 'badge-secondary'}">
+                                ${user.role === 'admin' ? 'Администратор' : 'Пользователь'}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="user-status ${user.is_active ? 'status-active' : 'status-inactive'}">
+                                <i class="fas ${user.is_active ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                                ${user.is_active ? 'Активный' : 'Неактивный'}
+                            </span>
+                        </td>
+                        <td>${createdAt.toLocaleDateString('ru-RU')}</td>
+                        <td>${lastLogin ? lastLogin.toLocaleString('ru-RU') : 'Никогда'}</td>
+                        <td>
+                            <div class="user-actions">
+                                <button class="action-btn edit-btn" data-id="${user.id}" title="Редактировать">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="action-btn reset-pwd-btn" data-id="${user.id}" title="Сбросить пароль">
+                                    <i class="fas fa-key"></i>
+                                </button>
+                                ${user.id !== currentUserId ? `
+                                <button class="action-btn delete-btn" data-id="${user.id}" title="Удалить">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    `;
+
+                    usersList.appendChild(row);
+                });
+
+                // Обновляем пагинацию
+                updatePagination(data.total_users, usersPerPage, page);
+
+                // Добавляем обработчики событий
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', editUser);
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', deleteUser);
+                });
+
+                document.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+                    btn.addEventListener('click', resetPassword);
+                });
+
+            } else {
+                usersList.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i>
+                                Пользователи не найдены
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки пользователей:', error);
+            usersList.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Ошибка загрузки данных
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
+    // Обновление пагинации
+    function updatePagination(totalUsers, perPage, currentPage) {
+        const totalPages = Math.ceil(totalUsers / perPage);
+        const pagination = document.querySelector('.pagination ul');
+
+        if (totalPages <= 1) {
+            pagination.style.display = 'none';
+            return;
+        }
+
+        pagination.style.display = 'flex';
+        pagination.innerHTML = '';
+
+        // Кнопка "Назад"
+        const prevItem = document.createElement('li');
+        prevItem.className = 'page-item';
+        prevItem.innerHTML = `
+            <a href="#" class="page-link ${currentPage === 1 ? 'disabled' : ''}" id="prev_page">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        `;
+        pagination.appendChild(prevItem);
+
+        // Нумерация страниц
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        if (startPage > 1) {
+            const firstItem = document.createElement('li');
+            firstItem.className = 'page-item';
+            firstItem.innerHTML = `<a href="#" class="page-link">1</a>`;
+            pagination.appendChild(firstItem);
+
+            if (startPage > 2) {
+                const ellipsisItem = document.createElement('li');
+                ellipsisItem.className = 'page-item disabled';
+                ellipsisItem.innerHTML = `<span class="page-link">...</span>`;
+                pagination.appendChild(ellipsisItem);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item';
+            pageItem.innerHTML = `
+                <a href="#" class="page-link ${i === currentPage ? 'active' : ''}">${i}</a>
+            `;
+            pagination.appendChild(pageItem);
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisItem = document.createElement('li');
+                ellipsisItem.className = 'page-item disabled';
+                ellipsisItem.innerHTML = `<span class="page-link">...</span>`;
+                pagination.appendChild(ellipsisItem);
+            }
+
+            const lastItem = document.createElement('li');
+            lastItem.className = 'page-item';
+            lastItem.innerHTML = `<a href="#" class="page-link">${totalPages}</a>`;
+            pagination.appendChild(lastItem);
+        }
+
+        // Кнопка "Вперед"
+        const nextItem = document.createElement('li');
+        nextItem.className = 'page-item';
+        nextItem.innerHTML = `
+            <a href="#" class="page-link ${currentPage === totalPages ? 'disabled' : ''}" id="next_page">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        `;
+        pagination.appendChild(nextItem);
+
+        // Обработчики событий для пагинации
+        document.querySelectorAll('.page-link:not(.disabled)').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                if (this.id === 'prev_page') {
+                    loadUsers(currentPage - 1, currentFilters);
+                } else if (this.id === 'next_page') {
+                    loadUsers(currentPage + 1, currentFilters);
+                } else {
+                    const pageNum = parseInt(this.textContent);
+                    if (!isNaN(pageNum)) {
+                        loadUsers(pageNum, currentFilters);
+                    }
+                }
+            });
+        });
+    }
+
+    // Редактирование пользователя
+    async function editUser(e) {
+        const userId = e.currentTarget.dataset.id;
+
+        try {
+            const response = await fetch(`/api/users/${userId}`);
+            const user = await response.json();
+
+            document.getElementById('userModalTitle').textContent = 'Редактировать пользователя';
+            document.getElementById('modal_username').value = user.username;
+            document.getElementById('modal_username').disabled = true;
+            document.getElementById('modal_password').value = '';
+            document.getElementById('modal_password').placeholder = 'Оставьте пустым, чтобы не менять';
+            document.getElementById('modal_password_confirm').value = '';
+            document.getElementById('modal_password_confirm').placeholder = 'Оставьте пустым, чтобы не менять';
+            document.getElementById('modal_role').value = user.role;
+            document.getElementById('modal_status').value = user.is_active ? 'active' : 'inactive';
+
+            const modal = document.getElementById('userModal');
+            modal.dataset.userId = userId;
+            modal.dataset.action = 'edit';
+            modal.classList.add('show');
+
+        } catch (error) {
+            console.error('Ошибка загрузки данных пользователя:', error);
+            showAlert('Ошибка загрузки данных пользователя', 'danger');
+        }
+    }
+
+    // Сброс пароля
+    async function resetPassword(e) {
+        const userId = e.currentTarget.dataset.id;
+
+        try {
+            const response = await fetch(`/api/users/${userId}`);
+            const user = await response.json();
+
+            document.getElementById('reset_username').textContent = user.username;
+
+            const modal = document.getElementById('resetPasswordModal');
+            modal.dataset.userId = userId;
+            modal.classList.add('show');
+
+        } catch (error) {
+            console.error('Ошибка загрузки данных пользователя:', error);
+            showAlert('Ошибка загрузки данных пользователя', 'danger');
+        }
+    }
+
+    // Удаление пользователя
+    async function deleteUser(e) {
+        const userId = e.currentTarget.dataset.id;
+
+        if (!confirm('Вы уверены, что хотите удалить этого пользователя? Это действие нельзя отменить.')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/${userId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                showAlert('Пользователь успешно удален', 'success');
+                loadUsers(currentPage, currentFilters);
+            } else {
+                showAlert(data.message || 'Ошибка при удалении пользователя', 'danger');
+            }
+        } catch (error) {
+            console.error('Ошибка удаления пользователя:', error);
+            showAlert('Ошибка при удалении пользователя', 'danger');
+        }
+    }
+
+    // Сохранение пользователя
+    async function saveUser() {
+        const modal = document.getElementById('userModal');
+        const userId = modal.dataset.userId;
+        const action = modal.dataset.action;
+        const username = document.getElementById('modal_username').value;
+        const password = document.getElementById('modal_password').value;
+        const passwordConfirm = document.getElementById('modal_password_confirm').value;
+        const role = document.getElementById('modal_role').value;
+        const status = document.getElementById('modal_status').value === 'active';
+
+        // Валидация
+        if (!username) {
+            showAlert('Имя пользователя обязательно', 'danger');
+            return;
+        }
+
+        if (action === 'add' && !password) {
+            showAlert('Пароль обязателен для нового пользователя', 'danger');
+            return;
+        }
+
+        if (password && password !== passwordConfirm) {
+            showAlert('Пароли не совпадают', 'danger');
+            return;
+        }
+
+        if (password && password.length < 8) {
+            showAlert('Пароль должен содержать не менее 8 символов', 'danger');
+            return;
+        }
+
+        const userData = {
+            username: username,
+            role: role,
+            is_active: status
+        };
+
+        if (password) {
+            userData.password = password;
+        }
+
+        try {
+            const url = action === 'edit' ? `/api/users/${userId}` : '/api/users';
+            const method = action === 'edit' ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                modal.classList.remove('show');
+                showAlert(`Пользователь успешно ${action === 'edit' ? 'обновлен' : 'добавлен'}`, 'success');
+                loadUsers(currentPage, currentFilters);
+            } else {
+                showAlert(data.message || `Ошибка при ${action === 'edit' ? 'обновлении' : 'добавлении'} пользователя`, 'danger');
+            }
+        } catch (error) {
+            console.error(`Ошибка ${action === 'edit' ? 'обновления' : 'добавления'} пользователя:`, error);
+            showAlert(`Ошибка при ${action === 'edit' ? 'обновлении' : 'добавлении'} пользователя`, 'danger');
+        }
+    }
+
+    // Подтверждение сброса пароля
+    async function confirmResetPassword() {
+        const modal = document.getElementById('resetPasswordModal');
+        const userId = modal.dataset.userId;
+        const newPassword = document.getElementById('new_password').value;
+
+        try {
+            const response = await fetch(`/api/users/${userId}/reset-password`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    new_password: newPassword || null
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                modal.classList.remove('show');
+                showAlert('Пароль успешно сброшен', 'success');
+
+                if (data.generated_password) {
+                    // Показываем сгенерированный пароль
+                    alert(`Новый пароль для пользователя: ${data.generated_password}\nСообщите его пользователю!`);
+                }
+            } else {
+                showAlert(data.message || 'Ошибка при сбросе пароля', 'danger');
+            }
+        } catch (error) {
+            console.error('Ошибка сброса пароля:', error);
+            showAlert('Ошибка при сбросе пароля', 'danger');
+        }
+    }
+
+    // Инициализация обработчиков событий
+    document.addEventListener('DOMContentLoaded', function() {
+        // Загрузка пользователей при открытии вкладки
+        document.querySelector('.menu-link[data-section="users"]').addEventListener('click', function() {
+            loadUsers();
+        });
+
+        // Добавление нового пользователя
+        document.getElementById('add_user_btn').addEventListener('click', function() {
+            document.getElementById('userModalTitle').textContent = 'Добавить пользователя';
+            document.getElementById('modal_username').value = '';
+            document.getElementById('modal_username').disabled = false;
+            document.getElementById('modal_password').value = '';
+            document.getElementById('modal_password').placeholder = 'Введите пароль';
+            document.getElementById('modal_password_confirm').value = '';
+            document.getElementById('modal_password_confirm').placeholder = 'Повторите пароль';
+            document.getElementById('modal_role').value = 'user';
+            document.getElementById('modal_status').value = 'active';
+
+            const modal = document.getElementById('userModal');
+            modal.dataset.userId = '';
+            modal.dataset.action = 'add';
+            modal.classList.add('show');
+        });
+
+        // Сохранение пользователя
+        document.getElementById('save_user_btn').addEventListener('click', saveUser);
+
+        // Отмена редактирования
+        document.getElementById('cancel_user_btn').addEventListener('click', function() {
+            document.getElementById('userModal').classList.remove('show');
+        });
+
+        // Подтверждение сброса пароля
+        document.getElementById('confirm_reset_btn').addEventListener('click', confirmResetPassword);
+
+        // Отмена сброса пароля
+        document.getElementById('cancel_reset_btn').addEventListener('click', function() {
+            document.getElementById('resetPasswordModal').classList.remove('show');
+        });
+
+        // Обновление списка пользователей
+        document.getElementById('refresh_users_btn').addEventListener('click', function() {
+            loadUsers(currentPage, currentFilters);
+        });
+
+        // Поиск пользователей
+        document.getElementById('users_search').addEventListener('input', function(e) {
+            const searchText = e.target.value.trim();
+            currentFilters.search = searchText;
+
+            // Задержка перед поиском (debounce)
+            clearTimeout(window.searchTimeout);
+            window.searchTimeout = setTimeout(() => {
+                loadUsers(1, currentFilters);
+            }, 500);
+        });
+
+        // Фильтрация пользователей
+        document.querySelectorAll('.filter-content input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                currentFilters.active = document.getElementById('filter_active').checked;
+                currentFilters.inactive = document.getElementById('filter_inactive').checked;
+                currentFilters.admins = document.getElementById('filter_admins').checked;
+                currentFilters.users = document.getElementById('filter_users').checked;
+
+                loadUsers(1, currentFilters);
+            });
+        });
+    });
+
     // Обработчик ошибок при запросах
     async function handleApiErrors(response) {
         if (!response.ok) {
@@ -1607,8 +2494,14 @@
         setInterval(checkCamerasStatus, 5000);  // Проверка каждые 5 секунд
     });
 
+    document.querySelectorAll('[data-dismiss="modal"], .modal-close').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.getElementById('addCameraModal').classList.remove('show');
+        });
+    });
+
     function updateCameraStatus(cameraId) {
-        fetch(`/api/camera_status/${cameraId}`)
+        fetch('/api/cameras/status')
             .then(response => response.json())
             .then(data => {
                 const cameraEl = document.querySelector(`.camera-card-simple[data-camera-id="${cameraId}"]`);
@@ -1619,7 +2512,8 @@
                 const connectBtn = cameraEl.querySelector('.connect-btn');
                 const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
 
-                if (data.connected) {
+                const cameraStatus = data[cameraId];
+                if (cameraStatus && cameraStatus.connected) {
                     statusText.textContent = 'Подключено';
                     indicator.className = 'status-indicator-simple connected';
                     if (connectBtn) connectBtn.disabled = true;
@@ -1902,6 +2796,31 @@
                 updateCamerasList();
             }
         });
+
+        // Обработчик закрытия модального окна
+        document.querySelectorAll('.modal-close, #cancel_camera_btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const modal = document.getElementById('addCameraModal');
+                modal.classList.remove('show');
+
+                // Сбрасываем форму
+                document.getElementById('camera_name_input').value = '';
+                document.getElementById('camera_url_input').value = '';
+                document.getElementById('camera_location_input').value = '';
+
+                // Восстанавливаем стандартный обработчик для кнопки сохранения
+                const saveBtn = document.getElementById('save_camera_btn');
+                saveBtn.textContent = 'Сохранить камеру';
+                saveBtn.onclick = function () {
+                    // Оригинальный обработчик для добавления новой камеры
+                    const name = document.getElementById('camera_name_input').value;
+                    const url = document.getElementById('camera_url_input').value;
+                    const location = document.getElementById('camera_location_input').value;
+                    addCamera(name, url, location);
+                };
+            });
+        });
+
 
         // Обработка навигации в боковом меню
         document.querySelectorAll('.menu-link').forEach(link => {
@@ -2197,7 +3116,7 @@
                 </div>
                 <div class="camera-placeholder">
                     <i class="fas fa-video" style="font-size: 2rem;"></i>
-                    <button class="btn btn-primary open-camera-btn" data-camera-id="${camera.id}">
+                    <button class="btn btn-primary open-camera-btn" data-camera-id="${camera.id}" data-url="${camera.url}">
                         <i class="fas fa-expand"></i> Открыть камеру
                     </button>
                 </div>
@@ -2285,6 +3204,7 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.cameras && data.cameras.length > 0) {
+                        const camerasContainer = document.getElementById('cameras_container');
                         camerasContainer.innerHTML = '';
                         data.cameras.forEach(camera => {
                             const cameraEl = createCameraElement(camera);
@@ -2336,6 +3256,18 @@
                                     });
                                 }
                             }
+
+                            const openBtn = cameraEl.querySelector('.open-camera-btn');
+                            if (openBtn) {
+                                openBtn.addEventListener('click', () => {
+                                    const cameraUrl = openBtn.getAttribute('data-url');
+                                    if (cameraUrl.endsWith('.html')) {
+                                        window.open(cameraUrl, '_blank');
+                                    } else {
+                                        window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
+                                    }
+                                });
+                            }
                         });
                     } else {
                         camerasContainer.innerHTML = `
@@ -2355,6 +3287,27 @@
                 </div>
             `;
                 });
+        }
+
+        function resetCameraForm() {
+            document.getElementById('camera_name_input').value = '';
+            document.getElementById('camera_url_input').value = '';
+            document.getElementById('camera_location_input').value = '';
+
+            const saveBtn = document.getElementById('save_camera_btn');
+            saveBtn.textContent = 'Сохранить камеру';
+
+            // Удаляем все обработчики
+            saveBtn.replaceWith(saveBtn.cloneNode(true));
+            const newSaveBtn = document.getElementById('save_camera_btn');
+
+            // Восстанавливаем обработчик для добавления новой камеры
+            newSaveBtn.onclick = function () {
+                const name = document.getElementById('camera_name_input').value;
+                const url = document.getElementById('camera_url_input').value;
+                const location = document.getElementById('camera_location_input').value;
+                addCamera(name, url, location);
+            };
         }
 
         // Подключение камеры
@@ -2471,91 +3424,97 @@
 
         // Редактирование камеры
         function editCamera(camera) {
-            cameraNameInput.value = camera.name;
-            cameraUrlInput.value = camera.url;
+            // Заполняем форму данными камеры
+            document.getElementById('camera_name_input').value = camera.name;
+            document.getElementById('camera_url_input').value = camera.url;
             document.getElementById('camera_location_input').value = camera.location || '';
-            modal.classList.add('show');
 
-            // Изменяем текст кнопки и модального окна для редактирования
+            // Изменяем заголовок и кнопку
             document.querySelector('#addCameraModal .modal-title').textContent = 'Редактировать камеру';
-            saveCameraBtn.textContent = 'Сохранить изменения';
-            saveCameraBtn.onclick = () => {
-                updateCamera(camera.id, cameraNameInput.value, cameraUrlInput.value, document.getElementById('camera_location_input').value);
+            const saveBtn = document.getElementById('save_camera_btn');
+            saveBtn.textContent = 'Сохранить изменения';
+
+            // Удаляем все предыдущие обработчики
+            saveBtn.replaceWith(saveBtn.cloneNode(true));
+            const newSaveBtn = document.getElementById('save_camera_btn');
+
+            // Добавляем новый обработчик для сохранения изменений
+            newSaveBtn.onclick = async function () {
+                const name = document.getElementById('camera_name_input').value;
+                const url = document.getElementById('camera_url_input').value;
+                const location = document.getElementById('camera_location_input').value;
+
+                if (!name || !url) {
+                    showAlert('Пожалуйста, заполните название и URL камеры', 'danger');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/cameras', {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            id: camera.id,
+                            name: name,
+                            url: url,
+                            location: location
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === 'success') {
+                        showAlert('Камера успешно обновлена', 'success');
+                        const modal = document.getElementById('addCameraModal');
+                        modal.classList.remove('show');
+                        resetCameraForm();
+                        await updateCamerasList();
+                    } else {
+                        showAlert(result.message || 'Ошибка при обновлении камеры', 'danger');
+                    }
+                } catch (error) {
+                    console.error('Ошибка при обновлении камеры:', error);
+                    showAlert('Ошибка при обновлении камеры', 'danger');
+                }
             };
+
+            // Показываем модальное окно
+            const modal = document.getElementById('addCameraModal');
+            modal.classList.add('show');
         }
 
-        // Обновление камеры
-        function updateCamerasList() {
-            fetch('/api/cameras')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.cameras && data.cameras.length > 0) {
-                        camerasContainer.innerHTML = '';
-                        data.cameras.forEach(camera => {
-                            const cameraEl = createCameraElement(camera);
-                            camerasContainer.appendChild(cameraEl);
+        async function updateCamera(cameraId, name, url, location) {
+            if (!name || !url) {
+                showAlert('Пожалуйста, заполните все обязательные поля', 'danger');
+                return;
+            }
 
-                            // Добавляем обработчик для кнопки открытия камеры
-                            const openBtn = cameraEl.querySelector('.open-camera-btn');
-                            if (openBtn) {
-                                openBtn.addEventListener('click', () => {
-                                    window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
-                                });
-                            }
-
-                            // Для администраторов добавляем обработчики управления
-                            const connectBtn = cameraEl.querySelector('.connect-btn');
-                            const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
-                            const editBtn = cameraEl.querySelector('.edit-btn');
-                            const deleteBtn = cameraEl.querySelector('.delete-btn');
-
-                            if (connectBtn) {
-                                connectBtn.addEventListener('click', () => {
-                                    connectCamera(camera.id);
-                                });
-                            }
-
-                            if (disconnectBtn) {
-                                disconnectBtn.addEventListener('click', () => {
-                                    disconnectCamera(camera.id);
-                                });
-                            }
-
-                            if (editBtn) {
-                                editBtn.addEventListener('click', () => {
-                                    editCamera(camera);
-                                });
-                            }
-
-                            if (deleteBtn) {
-                                deleteBtn.addEventListener('click', () => {
-                                    if (confirm(`Удалить камеру "${camera.name}"?`)) {
-                                        deleteCamera(camera.id);
-                                    }
-                                });
-                            }
-
-                            // Обновляем статус камеры
-                            updateCameraStatus(camera.id);
-                        });
-                    } else {
-                        camerasContainer.innerHTML = `
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i>
-                                Нет добавленных камер. Нажмите "Добавить камеру" для начала работы.
-                            </div>
-                        `;
-                    }
-                })
-                .catch(error => {
-                    console.error('Ошибка при загрузке камер:', error);
-                    camerasContainer.innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="fas fa-exclamation-circle"></i>
-                            Ошибка загрузки данных камер
-                        </div>
-                    `;
+            try {
+                const response = await fetch(`/api/cameras`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: cameraId, name, url, location})
                 });
+
+                if (!response.ok) {
+                    throw new Error('Ошибка сервера');
+                }
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    updateCamerasList();
+                    modal.classList.remove('show');
+                    showAlert('Камера успешно обновлена', 'success');
+                } else {
+                    showAlert(data.message || 'Ошибка при обновлении камеры', 'danger');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка при обновлении камеры', 'danger');
+            }
         }
 
         // Удаление камеры
