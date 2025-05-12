@@ -1595,18 +1595,36 @@
                             </div>
                             <small class="form-text">Чем выше значение, тем строже распознавание</small>
                         </div>
-
+                        <!-- FPS и типы транспорта -->
                         <div class="form-group">
-                            <label for="region-setting" class="form-label">
-                                <i class="fas fa-globe"></i>
-                                Регион номеров (В разработке)
+                            <label for="fps-setting" class="form-label">
+                                <i class="fas fa-tachometer-alt"></i>
+                                FPS (кадров в секунду)
                             </label>
-                            <select id="region-setting" class="form-select">
-                                <option value="ru">Россия</option>
-                                <option value="kz">Казахстан</option>
-                                <option value="by">Беларусь</option>
-                                <option value="eu">Европейский формат</option>
-                            </select>
+                            <input type="number" id="fps-setting" class="form-control" min="1" max="60" step="1" value="5">
+                            <small class="form-text">Рекомендуется 1-15</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <i class="fas fa-car"></i>
+                                Типы транспорта для распознавания
+                            </label>
+                            <div class="form-check">
+                                <input type="checkbox" id="vehicle-type-car" class="form-check-input" value="car">
+                                <label for="vehicle-type-car" class="form-check-label">Легковое авто</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="vehicle-type-truck" class="form-check-input" value="truck">
+                                <label for="vehicle-type-truck" class="form-check-label">Грузовик</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="vehicle-type-bus" class="form-check-input" value="bus">
+                                <label for="vehicle-type-bus" class="form-check-label">Автобус</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="vehicle-type-motorcycle" class="form-check-input" value="motorcycle">
+                                <label for="vehicle-type-motorcycle" class="form-check-label">Мотоцикл</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2541,54 +2559,8 @@
         }, 5000); // Обновляем каждые 5 секунд
     });
 
-    function setupRealTimeUpdates() {
-        // Используем EventSource для получения обновлений от сервера
-        const eventSource = new EventSource('/api/updates');
-
-        eventSource.onmessage = function (event) {
-            const data = JSON.parse(event.data);
-
-            if (data.type === 'new_plate') {
-                // Добавляем новый номер в начало списка
-                const platesList = document.getElementById('plates_list');
-                if (platesList) {
-                    const plateElement = createPlateElement(data.plate);
-                    plateElement.classList.add('new-plate');
-
-                    if (platesList.firstChild) {
-                        platesList.insertBefore(plateElement, platesList.firstChild);
-                    } else {
-                        platesList.appendChild(plateElement);
-                    }
-
-                    // Обновляем счетчик
-                    const countElement = document.getElementById('plates_count');
-                    if (countElement) {
-                        countElement.textContent = parseInt(countElement.textContent) + 1;
-                    }
-                }
-            }
-
-            if (data.type === 'camera_status') {
-                // Обновляем статус камеры
-                const cameraElement = document.querySelector(`.camera-card[data-camera-id="${data.camera_id}"]`);
-                if (cameraElement) {
-                    const statusElement = cameraElement.querySelector('.status-text');
-                    const indicator = cameraElement.querySelector('.status-indicator');
-
-                    if (statusElement && indicator) {
-                        statusElement.textContent = data.connected ? 'Подключено' : 'Отключено';
-                        indicator.className = data.connected ? 'status-indicator connected' : 'status-indicator disconnected';
-                    }
-                }
-            }
-        };
-
-        eventSource.onerror = function () {
-            console.log('EventSource error, reconnecting...');
-            setTimeout(setupRealTimeUpdates, 5000);
-        };
-    }
+    // Отключаю real-time обновления (setupRealTimeUpdates)
+    // setupRealTimeUpdates(); // <-- закомментировано, чтобы не было 404
 
     // ==================== НАСТРОЙКИ СИСТЕМЫ ====================
 
@@ -2617,6 +2589,14 @@
             // Статистика
             loadSystemStats();
 
+            // FPS и типы транспорта
+            if (data.fps) document.getElementById('fps-setting').value = data.fps;
+            const types = data.vehicle_types || ['car','truck','bus','motorcycle'];
+            document.getElementById('vehicle-type-car').checked = types.includes('car');
+            document.getElementById('vehicle-type-truck').checked = types.includes('truck');
+            document.getElementById('vehicle-type-bus').checked = types.includes('bus');
+            document.getElementById('vehicle-type-motorcycle').checked = types.includes('motorcycle');
+
         } catch (error) {
             console.error('Ошибка загрузки настроек:', error);
             showAlert('Ошибка загрузки настроек системы', 'danger');
@@ -2632,8 +2612,15 @@
             save_images: document.getElementById('save_images-setting').checked,
             email_notifications: document.getElementById('email_notifications-setting').checked,
             max_age: parseInt(document.getElementById('max_age-setting').value),
-            delete_before_date: document.getElementById('delete_before_date-setting').value
+            delete_before_date: document.getElementById('delete_before_date-setting').value,
+            fps: parseInt(document.getElementById('fps-setting').value),
+            vehicle_types: []
         };
+
+        if (document.getElementById('vehicle-type-car').checked) settings.vehicle_types.push('car');
+        if (document.getElementById('vehicle-type-truck').checked) settings.vehicle_types.push('truck');
+        if (document.getElementById('vehicle-type-bus').checked) settings.vehicle_types.push('bus');
+        if (document.getElementById('vehicle-type-motorcycle').checked) settings.vehicle_types.push('motorcycle');
 
         try {
             const response = await safeFetch('/api/settings', {
@@ -2644,19 +2631,23 @@
                 body: JSON.stringify(settings)
             });
 
-            if (!response) return;
+            if (!response) {
+                showAlert('Ошибка: нет ответа от сервера', 'danger');
+                return;
+            }
 
             const data = await response.json();
 
             if (data.status === 'success') {
                 showAlert('Настройки успешно сохранены', 'success');
                 loadSystemStats(); // Обновляем статистику
+                loadSystemSettings(); // Обновляем значения чекбоксов и FPS из конфига
             } else {
                 showAlert(data.message || 'Ошибка сохранения настроек', 'danger');
             }
         } catch (error) {
             console.error('Ошибка сохранения настроек:', error);
-            showAlert('Ошибка сохранения настроек системы', 'danger');
+            showAlert('Ошибка сохранения настроек системы: ' + error, 'danger');
         }
     }
 
@@ -2731,11 +2722,12 @@
             if (!response) return;
 
             const data = await response.json();
-
-            document.getElementById('total_records').textContent = data.total_records;
-            document.getElementById('total_images').textContent = data.total_images;
-            document.getElementById('db_size').textContent = `${data.db_size} MB`;
-
+            if (document.getElementById('total_records'))
+                document.getElementById('total_records').textContent = data.total_records;
+            if (document.getElementById('total_images'))
+                document.getElementById('total_images').textContent = data.total_images;
+            if (document.getElementById('db_size'))
+                document.getElementById('db_size').textContent = `${data.db_size} MB`;
         } catch (error) {
             console.error('Ошибка загрузки статистики:', error);
             showAlert('Ошибка загрузки статистики системы', 'danger');
@@ -2840,6 +2832,16 @@
 
                 // Переключаемся на соответствующую секцию
                 switchSection(section);
+
+                // ДОБАВЛЕНО: при открытии вкладки вызываем нужные функции
+                if (section === 'plates') {
+                    updatePlatesList();
+                    updatePlatesCount24h();
+                }
+                if (section === 'settings') {
+                    loadSystemSettings();
+                    loadSystemStats();
+                }
             });
         });
 
@@ -3137,37 +3139,89 @@
         // Функция для создания элемента распознанного номера
         function createPlateElement(plate) {
             const date = new Date(plate.timestamp);
-            const moscowOffset = 3 * 60 * 60 * 1000; // MSK (UTC+3)
-            const moscowTime = new Date(date.getTime() + moscowOffset);
+            // const moscowOffset = 3 * 60 * 60 * 1000; // MSK (UTC+3)
+            // const moscowTime = new Date(date.getTime() + moscowOffset);
+            // Используем только date
+            let moscowTime = date;
+
+            // Дата события въезда/выезда
+            let eventTime = plate.event_time ? new Date(plate.event_time) : moscowTime;
+            let eventTimeStr = eventTime.toLocaleString('ru-RU');
+            let eventType = plate.event_type === 'in' ? 'Въезд' : (plate.event_type === 'out' ? 'Выезд' : 'Неизвестно');
+            let eventColor = plate.event_type === 'in' ? '#27ae60' : (plate.event_type === 'out' ? '#e67e22' : '#7f8c8d');
+            let eventIcon = plate.event_type === 'in' ? 'fa-sign-in-alt' : (plate.event_type === 'out' ? 'fa-sign-out-alt' : 'fa-question');
+            let vehicleType = plate.vehicle_type || 'Неизвестно';
+
+            // Блок связки
+            let linkedBlock = '';
+            if (plate.linked_plate_text) {
+                linkedBlock = `<div class=\"plate-link-block\" style=\"margin-top:4px; color:#2980b9; font-size:0.95em;\">\n            <i class=\"fas fa-link\"></i> Связан с: <b>${plate.linked_plate_text}</b>\n        </div>`;
+            }
 
             const plateItem = document.createElement('div');
             plateItem.className = 'plate-item';
             plateItem.dataset.plateId = plate.id;
             plateItem.innerHTML = `
-                    <div class="plate-info">
-                        <div class="plate-number">${plate.text}</div>
-                        <div class="plate-details">
-                            <span class="plate-detail">
-                                <i class="fas fa-camera"></i> ${plate.camera_name || 'Неизвестно'}
-                            </span>
-                            <span class="plate-detail">
-                                <i class="fas fa-clock"></i> ${moscowTime.toLocaleString('ru-RU')}
-                            </span>
-                            <span class="plate-detail">
-                                <i class="fas fa-percentage"></i> ${(plate.score * 100).toFixed(1)}%
-                            </span>
-                        </div>
-                    </div>
-                    <div class="plate-actions">
-                        <button class="btn btn-sm btn-primary view-plate-btn" data-plate-id="${plate.id}" title="Просмотреть изображение">
-                            <i class="fas fa-image"></i> Просмотреть
-                        </button>
-                    </div>
-                `;
+                    <div class=\"plate-info\">\n                <div class=\"plate-number\">${plate.text}</div>\n                ${linkedBlock}\n                <div class=\"plate-details\">\n                    <span class=\"plate-detail\">\n                        <i class=\"fas fa-car\"></i> ${vehicleType}\n                    </span>\n                    <span class=\"plate-detail\">\n                        <i class=\"fas fa-camera\"></i> ${plate.camera_name || 'Неизвестно'}\n                    </span>\n                    <span class=\"plate-detail\">\n                        <i class=\"fas fa-clock\"></i> ${moscowTime.toLocaleString('ru-RU')}\n                    </span>\n                    <span class=\"plate-detail\">\n                        <i class=\"fas fa-percentage\"></i> ${(plate.score * 100).toFixed(1)}%\n                    </span>\n                    <span class=\"plate-detail\" style=\"color: ${eventColor}; font-weight: bold;\">\n                        <i class=\"fas ${eventIcon}\"></i> ${eventType}\n                    </span>\n                    <span class=\"plate-detail\">\n                        <i class=\"fas fa-calendar-day\"></i> ${eventTimeStr}\n                    </span>\n                </div>\n            </div>\n            <div class=\"plate-actions\">\n                <button class=\"btn btn-sm btn-primary view-plate-btn\" data-plate-id=\"${plate.id}\" title=\"Просмотреть изображение\">\n                    <i class=\"fas fa-image\"></i> Просмотреть\n                </button>\n            </div>\n        `;
             return plateItem;
         }
 
-        // Обновление списка распознанных номеров
+        // Создание объединённой карточки для пары грузовик-прицеп
+        function createLinkedPlatesElement(plate1, plate2) {
+            // plate1 и plate2 — связанные номера (тягач и прицеп)
+            // Определяем кто кто
+            let truck, trailer;
+            if (plate1.vehicle_type === 'Грузовик') {
+                truck = plate1;
+                trailer = plate2;
+            } else {
+                truck = plate2;
+                trailer = plate1;
+            }
+            // Время — берём более раннее
+            let timeStr = new Date(truck.timestamp).toLocaleString('ru-RU') + ' / ' + new Date(trailer.timestamp).toLocaleString('ru-RU');
+            // Камера — если совпадает, выводим одну
+            let cameraStr = truck.camera_name === trailer.camera_name ? truck.camera_name : truck.camera_name + ' / ' + trailer.camera_name;
+            // Уверенность
+            let scoreStr = `${(truck.score * 100).toFixed(1)}% / ${(trailer.score * 100).toFixed(1)}%`;
+            // Статус
+            let eventType = truck.event_type === 'in' ? 'Въезд' : (truck.event_type === 'out' ? 'Выезд' : 'Неизвестно');
+            let eventColor = truck.event_type === 'in' ? '#27ae60' : (truck.event_type === 'out' ? '#e67e22' : '#7f8c8d');
+            let eventIcon = truck.event_type === 'in' ? 'fa-sign-in-alt' : (truck.event_type === 'out' ? 'fa-sign-out-alt' : 'fa-question');
+
+            const el = document.createElement('div');
+            el.className = 'plate-item plate-linked-pair';
+            el.style.borderLeft = '4px solid #2980b9';
+            el.style.background = '#f0f6fa';
+            el.innerHTML = `
+                <div class="plate-info">
+                    <div style="font-weight:600; font-size:1.1em; color:#2c3e50; margin-bottom:2px;">
+                        <i class="fas fa-truck"></i> ${truck.text} <span style="color:#888;">(Грузовик)</span>
+                        <span style="font-size:1.2em; color:#2980b9; margin:0 8px;">↔️</span>
+                        <i class="fas fa-trailer"></i> ${trailer.text} <span style="color:#888;">(Прицеп)</span>
+                    </div>
+                    <div class="plate-details">
+                        <span class="plate-detail"><i class="fas fa-camera"></i> ${cameraStr}</span>
+                        <span class="plate-detail"><i class="fas fa-clock"></i> ${timeStr}</span>
+                        <span class="plate-detail"><i class="fas fa-percentage"></i> ${scoreStr}</span>
+                        <span class="plate-detail" style="color: ${eventColor}; font-weight: bold;">
+                            <i class="fas ${eventIcon}"></i> ${eventType}
+                        </span>
+                    </div>
+                </div>
+                <div class="plate-actions">
+                    <button class="btn btn-sm btn-primary view-plate-btn" data-plate-id="${truck.id}" title="Просмотреть изображение грузовика">
+                        <i class="fas fa-image"></i> Тягач
+                    </button>
+                    <button class="btn btn-sm btn-primary view-plate-btn" data-plate-id="${trailer.id}" title="Просмотреть изображение прицепа">
+                        <i class="fas fa-image"></i> Прицеп
+                    </button>
+                </div>
+            `;
+            return el;
+        }
+
+        // Обновлённая функция для группировки и вывода номеров
         function updatePlatesList() {
             fetch('/api/recent_plates')
                 .then(response => response.json())
@@ -3175,8 +3229,25 @@
                     const platesList = document.getElementById('plates_list');
                     if (data.plates && data.plates.length > 0) {
                         platesList.innerHTML = '';
+                        // Группируем по связке
+                        const idToPlate = {};
+                        data.plates.forEach(p => { idToPlate[p.id] = p; });
+                        const shown = new Set();
                         data.plates.forEach(plate => {
-                            platesList.appendChild(createPlateElement(plate));
+                            if (shown.has(plate.id)) return;
+                            if (plate.linked_plate_id && idToPlate[plate.linked_plate_id]) {
+                                // Есть связка, выводим пару один раз
+                                const pair = idToPlate[plate.linked_plate_id];
+                                if (!shown.has(pair.id)) {
+                                    platesList.appendChild(createLinkedPlatesElement(plate, pair));
+                                    shown.add(plate.id);
+                                    shown.add(pair.id);
+                                }
+                            } else {
+                                // Одиночная карточка
+                                platesList.appendChild(createPlateElement(plate));
+                                shown.add(plate.id);
+                            }
                         });
                     } else {
                         platesList.innerHTML = `
@@ -3610,7 +3681,6 @@
         // Инициализация
         updateCamerasList();
         updatePlatesList();
-        setupRealTimeUpdates();
 
         // Обработчики для фильтрации и экспорта
         const filterModal = document.getElementById('platesFilterModal');
@@ -3868,6 +3938,18 @@
                 `;
             document.getElementById('alerts-container').appendChild(alertDiv);
             setTimeout(() => alertDiv.remove(), 5000);
+        }
+
+        // Функция для обновления счётчика номеров за 24 часа
+        function updatePlatesCount24h() {
+            fetch('/api/recent_plates')
+                .then(response => response.json())
+                .then(data => {
+                    const countElement = document.getElementById('plates_count');
+                    if (countElement && data.count !== undefined) {
+                        countElement.textContent = data.count;
+                    }
+                });
         }
     });
 </script>

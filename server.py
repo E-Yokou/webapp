@@ -23,6 +23,7 @@ from ultralytics import YOLO
 from util import read_license_plate, get_car, is_plate_inside_car, get_plate_center, get_car_center
 import io
 import xlsxwriter
+import re
 
 app = Flask(__name__)
 
@@ -44,7 +45,9 @@ CONFIG_FILE = 'config.json'
 DEFAULT_CONFIG = {
     'cameras': [],
     'current_camera': None,
-    'threshold': 0.85
+    'threshold': 0.85,
+    'fps': 15,
+    'vehicle_types': ['car', 'truck', 'bus', 'motorcycle']
 }
 
 camera_states = {}
@@ -71,6 +74,7 @@ stop_event = threading.Event()
 
 
 def save_config(config):
+    print('Сохраняю конфиг в:', os.path.abspath(CONFIG_FILE))
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config, f, indent=4)
     logging.info("Конфигурация успешно сохранена")
@@ -81,27 +85,15 @@ def init_db():
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS recognized_plates
                  (
-                     id
-                     INTEGER
-                     PRIMARY
-                     KEY
-                     AUTOINCREMENT,
-                     plate_text
-                     TEXT
-                     NOT
-                     NULL,
-                     camera_id
-                     INTEGER,
-                     camera_name
-                     TEXT,
-                     score
-                     REAL,
-                     timestamp
-                     DATETIME
-                     DEFAULT
-                     CURRENT_TIMESTAMP,
-                     image
-                     BLOB
+                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                     plate_text TEXT NOT NULL,
+                     camera_id INTEGER,
+                     camera_name TEXT,
+                     vehicle_type TEXT,
+                     score REAL,
+                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                     image BLOB,
+                     linked_plate_id INTEGER
                  )''')
 
     # Индекс для быстрой проверки дубликатов
@@ -155,8 +147,8 @@ def init_db():
     conn.close()
 
 
-def insert_plate_data(plate_text, image, camera_id, camera_name, score):
-    """Вставляет данные о распознанном номере с проверкой на дубликаты за последние 5 минут"""
+def insert_plate_data(plate_text, image, camera_id, camera_name, vehicle_type, score, linked_plate_id=None):
+    """Вставляет данные о распознанном номере с проверкой на дубликаты за последние 5 минут, с учетом типа транспорта и связки с прицепом/грузовиком"""
     moscow_tz = pytz.timezone('Europe/Moscow')
     current_time = datetime.now(moscow_tz)
 
@@ -186,15 +178,16 @@ def insert_plate_data(plate_text, image, camera_id, camera_name, score):
     # Вставляем новую запись
     c.execute("""
               INSERT INTO recognized_plates
-                  (plate_text, camera_id, camera_name, score, timestamp, image)
-              VALUES (?, ?, ?, ?, ?, ?)
-              """, (plate_text, camera_id, camera_name, score,
-                    current_time.strftime('%Y-%m-%d %H:%M:%S'), image))
+                  (plate_text, camera_id, camera_name, vehicle_type, score, timestamp, image, linked_plate_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+              """, (plate_text, camera_id, camera_name, vehicle_type, score,
+                    current_time.strftime('%Y-%m-%d %H:%M:%S'), image, linked_plate_id))
 
+    new_id = c.lastrowid
     conn.commit()
     conn.close()
     logging.info(f"Новый номер {plate_text} успешно записан")
-    return True
+    return new_id
 
 
 def get_moscow_time():
@@ -202,7 +195,7 @@ def get_moscow_time():
 
 
 def get_recent_plates(limit=100):
-    """Возвращает список последних распознанных номеров с московским временем"""
+    """Возвращает список последних распознанных номеров с московским временем, статусом въезд/выезд, типом транспорта и связью грузовик-прицеп"""
     conn = sqlite3.connect('plates.db')
     c = conn.cursor()
     c.execute("""
@@ -210,23 +203,62 @@ def get_recent_plates(limit=100):
                      plate_text,
                      camera_id,
                      camera_name,
+                     vehicle_type,
                      score,
-                     datetime(timestamp, 'localtime') as local_timestamp
+                     datetime(timestamp, 'localtime') as local_timestamp,
+                     timestamp,
+                     linked_plate_id
               FROM recognized_plates
               ORDER BY timestamp DESC
                   LIMIT ?""", (limit,))
 
     plates = []
     for row in c.fetchall():
-        plates.append({
+        plate = {
             'id': row[0],
             'text': row[1],
             'camera_id': row[2],
             'camera_name': row[3],
-            'score': row[4],
-            'timestamp': row[5]
-        })
+            'vehicle_type': row[4],
+            'score': row[5],
+            'timestamp': row[6],  # локальное время для отображения
+            'raw_timestamp': row[7],  # для анализа истории
+            'linked_plate_id': row[8]
+        }
+        # Если есть связь, получаем номер связанного участника
+        if plate['linked_plate_id']:
+            c2 = conn.cursor()
+            c2.execute("SELECT plate_text FROM recognized_plates WHERE id = ?", (plate['linked_plate_id'],))
+            linked_row = c2.fetchone()
+            plate['linked_plate_text'] = linked_row[0] if linked_row else None
+        plates.append(plate)
+    # Для определения статуса въезд/выезд нужно получить историю для каждого номера
+    plate_texts = list(set([p['text'] for p in plates]))
+    history = {}
+    for plate_text in plate_texts:
+        c.execute("""
+            SELECT id, timestamp
+            FROM recognized_plates
+            WHERE plate_text = ?
+            ORDER BY timestamp ASC
+        """, (plate_text,))
+        history[plate_text] = c.fetchall()
     conn.close()
+    for plate in plates:
+        plate_id = plate['id']
+        plate_text = plate['text']
+        events = history[plate_text]
+        idx = next((i for i, (pid, _) in enumerate(events) if pid == plate_id), None)
+        if idx is not None:
+            if idx % 2 == 0:
+                plate['event_type'] = 'in'
+                plate['event_time'] = events[idx][1]
+            else:
+                plate['event_type'] = 'out'
+                plate['event_time'] = events[idx][1]
+        else:
+            plate['event_type'] = 'unknown'
+            plate['event_time'] = plate['raw_timestamp']
     return plates
 
 
@@ -466,6 +498,24 @@ def register():
     return render_template('register.html')
 
 
+def is_trailer_plate(plate_text, region='ru'):
+    # РФ: 4 цифры + 2 буквы + 2 цифры (пример: 1234АА77)
+    #     2 буквы + 6 цифр (пример: АР327328)
+    if region == 'ru':
+        return (
+            bool(re.match(r'^[0-9]{4}[A-ZА-Я]{2}[0-9]{2}$', plate_text)) or
+            bool(re.match(r'^[A-ZА-Я]{2}[0-9]{6}$', plate_text))
+        )
+    # Беларусь: 4 цифры + 2 буквы + 1 цифра (пример: 1234АА7)
+    if region == 'by':
+        return bool(re.match(r'^[0-9]{4}[A-ZА-Я]{2}[0-9]$', plate_text))
+    # Казахстан: 4 цифры + 2 буквы + 2 цифры
+    if region == 'kz':
+        return bool(re.match(r'^[0-9]{4}[A-ZА-Я]{2}[0-9]{2}$', plate_text))
+    # Европа: можно добавить шаблоны
+    return False
+
+
 def process_frame(frame, camera_id=None):
     try:
         start_time = time.time()
@@ -473,10 +523,32 @@ def process_frame(frame, camera_id=None):
         # Vehicle detection
         vehicle_detections = coco_model(frame)[0]
         vehicle_boxes = []
+        vehicle_types = []  # Новый список для хранения типа транспорта
+        allowed_types = config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle'])
         for detection in vehicle_detections.boxes.data.tolist():
             x1, y1, x2, y2, score, class_id = detection
+            # Определяем тип транспорта
+            if int(class_id) == 2:
+                vtype = 'Легковое авто'
+                vtype_key = 'car'
+            elif int(class_id) == 7:
+                vtype = 'Грузовик'
+                vtype_key = 'truck'
+            elif int(class_id) == 5:
+                vtype = 'Автобус'
+                vtype_key = 'bus'
+            elif int(class_id) == 3:
+                vtype = 'Мотоцикл'
+                vtype_key = 'motorcycle'
+            else:
+                vtype = 'Неизвестно'
+                vtype_key = None
+            # Фильтрация по выбранным типам транспорта
+            if vtype_key and vtype_key not in allowed_types:
+                continue
             if int(class_id) in vehicles:
                 vehicle_boxes.append([x1, y1, x2, y2, score])
+                vehicle_types.append(vtype)
 
         # Vehicle tracking
         track_ids = mot_tracker.update(np.asarray(vehicle_boxes)) if vehicle_boxes else []
@@ -527,7 +599,8 @@ def process_frame(frame, camera_id=None):
             # Find closest vehicle without plate
             best_match = None
             min_distance = float('inf')
-            for track in track_ids:
+            best_vehicle_type = 'Неизвестно'
+            for idx, track in enumerate(track_ids):
                 xcar1, ycar1, xcar2, ycar2, track_id = track
                 if track_id in updated_vehicles:
                     continue
@@ -539,6 +612,10 @@ def process_frame(frame, camera_id=None):
                     if distance < min_distance:
                         min_distance = distance
                         best_match = track_id
+                        if idx < len(vehicle_types):
+                            best_vehicle_type = vehicle_types[idx]
+                        else:
+                            best_vehicle_type = 'Неизвестно'
 
             if best_match:
                 tracked_plates[best_match] = {
@@ -548,16 +625,59 @@ def process_frame(frame, camera_id=None):
                 }
                 updated_vehicles.add(best_match)
 
+                # --- Корректировка типа транспорта ---
+                region = config.get('region', 'ru')
+                if best_vehicle_type == 'Грузовик' and is_trailer_plate(plate_text, region):
+                    vehicle_type_for_db = 'Прицеп'
+                else:
+                    vehicle_type_for_db = best_vehicle_type
+                # --- Логика связки грузовик-прицеп ---
+                is_trailer = (vehicle_type_for_db == 'Прицеп')
+                is_truck = (vehicle_type_for_db == 'Грузовик')
+                linked_plate_id = None
+                # Если это прицеп, ищем грузовик за последние 60 секунд на той же камере
+                if is_trailer:
+                    conn = sqlite3.connect('plates.db')
+                    c = conn.cursor()
+                    c.execute("""
+                        SELECT id FROM recognized_plates
+                        WHERE vehicle_type = 'Грузовик'
+                          AND camera_id = ?
+                          AND ABS(strftime('%s', timestamp) - strftime('%s', ?)) <= 60
+                        ORDER BY ABS(strftime('%s', timestamp) - strftime('%s', ?)) ASC
+                        LIMIT 1
+                    """, (camera_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    row = c.fetchone()
+                    if row:
+                        linked_plate_id = row[0]
+                    conn.close()
+                # Если это грузовик, ищем прицеп за последние 60 секунд на той же камере
+                elif is_truck:
+                    conn = sqlite3.connect('plates.db')
+                    c = conn.cursor()
+                    c.execute("""
+                        SELECT id FROM recognized_plates
+                        WHERE vehicle_type = 'Прицеп'
+                          AND camera_id = ?
+                          AND ABS(strftime('%s', timestamp) - strftime('%s', ?)) <= 60
+                        ORDER BY ABS(strftime('%s', timestamp) - strftime('%s', ?)) ASC
+                        LIMIT 1
+                    """, (camera_id, datetime.now().strftime('%Y-%m-%d %H:%M:%S'), datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+                    row = c.fetchone()
+                    if row:
+                        linked_plate_id = row[0]
+                    conn.close()
+                # --- Конец логики связки ---
+
                 # Сохраняем только если номер новый (без дубликатов за 5 минут)
                 if plate_text != getattr(app, f'last_saved_plate_{camera_id}', None):
                     try:
                         _, buffer = cv2.imencode('.jpg', frame)
                         camera_name = next((cam['name'] for cam in config['cameras'] if cam['id'] == camera_id),
                                            'Unknown')
-
                         # Пытаемся вставить (функция сама проверит дубликаты)
-                        if insert_plate_data(plate_text, buffer.tobytes(), camera_id, camera_name, plate_score):
-                            setattr(app, f'last_saved_plate_{camera_id}', plate_text)
+                        new_id = insert_plate_data(plate_text, buffer.tobytes(), camera_id, camera_name, vehicle_type_for_db, plate_score, linked_plate_id)
+                        setattr(app, f'last_saved_plate_{camera_id}', plate_text)
                     except Exception as e:
                         logging.error(f"Ошибка сохранения: {e}")
 
@@ -936,6 +1056,9 @@ def recent_plates():
     # Добавляем флаг дубликата в данные
     for plate in plates:
         plate['is_duplicate'] = duplicates.get(plate['text'], 0) > 1
+        # Удаляем raw_timestamp из ответа (он только для внутренней логики)
+        if 'raw_timestamp' in plate:
+            del plate['raw_timestamp']
 
     return jsonify({
         'plates': plates,
@@ -1035,7 +1158,9 @@ def manage_settings():
             'save_images': config.get('save_images', True),
             'email_notifications': config.get('email_notifications', False),
             'max_age': config.get('max_age', 30),
-            'delete_before_date': config.get('delete_before_date', '')
+            'delete_before_date': config.get('delete_before_date', ''),
+            'fps': config.get('fps', 15),
+            'vehicle_types': config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle'])
         })
 
     elif request.method == 'POST':
@@ -1048,7 +1173,9 @@ def manage_settings():
             'save_images': bool(data.get('save_images', config.get('save_images', True))),
             'email_notifications': bool(data.get('email_notifications', config.get('email_notifications', False))),
             'max_age': int(data.get('max_age', config.get('max_age', 30))),
-            'delete_before_date': data.get('delete_before_date', config.get('delete_before_date', ''))
+            'delete_before_date': data.get('delete_before_date', config.get('delete_before_date', '')),
+            'fps': int(data.get('fps', config.get('fps', 15))),
+            'vehicle_types': data.get('vehicle_types', config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle']))
         })
         save_config(config)
         return jsonify({'status': 'success'})
