@@ -1,0 +1,75 @@
+{
+    "cameras": [
+        {
+            "id": 0,
+            "name": "Camera Vivo",
+            "url": "http://192.168.1.106:8080/video",
+            "location": "",
+            "settings": {
+                "roi": {
+                    "enabled": false,
+                    "x": 0,
+                    "y": 0,
+                    "width": 100,
+                    "height": 100
+                },
+                "brightness": 14,
+                "contrast": 4,
+                "frame_skip": {
+                    "enabled": false,
+                    "interval": 1
+                }
+            }
+        },
+        {
+            "id": 1,
+            "name": "\u0412\u0435\u0441\u043e\u0432\u0430\u044f (\u041a\u0430\u043c\u0435\u0440\u0430 1)",
+            "url": "http://10.10.20.200:8090/camera1.html",
+            "location": "",
+            "settings": {
+                "roi": {
+                    "enabled": false,
+                    "x": 0,
+                    "y": 0,
+                    "width": 100,
+                    "height": 100
+                },
+                "brightness": 0,
+                "contrast": 0,
+                "frame_skip": {
+                    "enabled": false,
+                    "interval": 1
+                }
+            }
+        },
+        {
+            "id": 2,
+            "name": "\u0412\u0435\u0441\u043e\u0432\u0430\u044f (\u041a\u0430\u043c\u0435\u0440\u0430 2)",
+            "url": "http://10.10.20.200:8090/camera3.html",
+            "location": "",
+            "settings": {
+                "roi": {
+                    "enabled": false,
+                    "x": 0,
+                    "y": 0,
+                    "width": 100,
+                    "height": 100
+                },
+                "brightness": 0,
+                "contrast": 0,
+                "frame_skip": {
+                    "enabled": false,
+                    "interval": 1
+                }
+            }
+        }
+    ],
+    "current_camera": 0,
+    "threshold": 0.2,
+    "region": "ru",
+    "enable_alpr": true,
+    "save_images": true,
+    "email_notifications": true,
+    "max_age": 30,
+    "delete_before_date": ""
+}
