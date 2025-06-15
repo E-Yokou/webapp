@@ -274,13 +274,13 @@ def draw_license_plate_text(image, text, position, font_size=30, bg_color=(255, 
         draw = ImageDraw.Draw(pil_image)
 
         try:
-            # Пробуем загрузить DejaVuSans.ttf
-            font = ImageFont.truetype("DejaVuSans.ttf", font_size)
+            # Пробуем загрузить DejaVuSans.ttf с явным указанием кодировки
+            font = ImageFont.truetype("DejaVuSans.ttf", font_size, encoding='utf-8')
         except:
             font = ImageFont.load_default()
 
         # Рассчитываем размеры текста
-        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_bbox = draw.textbbox((0, 0), text.encode('utf-8').decode('utf-8'), font=font)
         text_width = text_bbox[2] - text_bbox[0]
         text_height = text_bbox[3] - text_bbox[1]
 
@@ -295,7 +295,7 @@ def draw_license_plate_text(image, text, position, font_size=30, bg_color=(255, 
         # Рисуем текст
         text_x = x1 + 10
         text_y = y1 + 5
-        draw.text((text_x, text_y), text, font=font, fill=text_color)
+        draw.text((text_x, text_y), text.encode('utf-8').decode('utf-8'), font=font, fill=text_color)
 
         # Конвертируем обратно в OpenCV формат
         return cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
@@ -408,7 +408,8 @@ def read_license_plate(license_plate_crop, region='ru'):
         best_score = 0
         for detection in detections:
             bbox, text, score = detection
-            text = text.upper().replace(' ', '').replace('-', '')
+            # Обработка текста с учетом кодировки
+            text = text.encode('utf-8').decode('utf-8').upper().replace(' ', '').replace('-', '')
             text = ''.join(c for c in text if c.isalnum())
             if len(text) < 5:
                 continue
@@ -484,11 +485,11 @@ def draw_tracked_plate(image, text, car_bbox, score=0.0):
         draw = ImageDraw.Draw(pil_image)
 
         try:
-            font = ImageFont.truetype("DejaVuSans.ttf", 24)
+            font = ImageFont.truetype("DejaVuSans.ttf", 24, encoding='utf-8')
         except:
             font = ImageFont.load_default()
 
-        display_text = f"{text} ({score:.2f})"
+        display_text = f"{text.encode('utf-8').decode('utf-8')} ({score:.2f})"
 
         # Рассчитываем размер текста
         text_bbox = draw.textbbox((0, 0), display_text, font=font)

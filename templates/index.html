@@ -1329,6 +1329,117 @@
         .user-row {
             animation: fadeIn 0.3s ease-out;
         }
+
+        /* Стили для статусов камер */
+        .camera-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--danger);
+            transition: background-color 0.3s ease;
+        }
+
+        .status-indicator.connected {
+            background-color: var(--success);
+            animation: pulse 1.5s infinite;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            color: var(--gray);
+            transition: color 0.3s ease;
+        }
+
+        .status-text.connected {
+            color: var(--success);
+        }
+
+        .status-text.processing {
+            color: var(--info);
+        }
+
+        .status-text.disconnected {
+            color: var(--danger);
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        /* Стили для горизонтальной пагинации */
+        .pagination-horizontal {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 20px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .pagination-horizontal ul {
+            display: flex;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            gap: 5px;
+        }
+
+        .pagination-horizontal .page-item {
+            display: flex;
+        }
+
+        .pagination-horizontal .page-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 8px;
+            border-radius: 6px;
+            background-color: var(--white);
+            color: var(--dark);
+            text-decoration: none;
+            transition: var(--transition);
+            border: 1px solid #eee;
+            white-space: nowrap;
+        }
+
+        .pagination-horizontal .page-link:hover {
+            background-color: var(--light);
+        }
+
+        .pagination-horizontal .page-link.active {
+            background-color: var(--secondary);
+            color: var(--white);
+            border-color: var(--secondary);
+        }
+
+        .pagination-horizontal .page-link.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Адаптивные стили для пагинации */
+        @media (max-width: 768px) {
+            .pagination-horizontal {
+                justify-content: flex-start;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1389,18 +1500,18 @@
                     <span>Управление пользователями</span>
                 </a>
             </li>
-<!--            <li class="menu-item">-->
-<!--                <a href="#" class="menu-link" data-section="stats">-->
-<!--                    <i class="fas fa-chart-line"></i>-->
-<!--                    <span>Статистика</span>-->
-<!--                </a>-->
-<!--            </li>-->
-<!--            <li class="menu-item">-->
-<!--                <a href="#" class="menu-link" data-section="history">-->
-<!--                    <i class="fas fa-history"></i>-->
-<!--                    <span>История событий</span>-->
-<!--                </a>-->
-<!--            </li>-->
+            <!--            <li class="menu-item">-->
+            <!--                <a href="#" class="menu-link" data-section="stats">-->
+            <!--                    <i class="fas fa-chart-line"></i>-->
+            <!--                    <span>Статистика</span>-->
+            <!--                </a>-->
+            <!--            </li>-->
+            <!--            <li class="menu-item">-->
+            <!--                <a href="#" class="menu-link" data-section="history">-->
+            <!--                    <i class="fas fa-history"></i>-->
+            <!--                    <span>История событий</span>-->
+            <!--                </a>-->
+            <!--            </li>-->
         </ul>
     </aside>
 
@@ -1458,6 +1569,29 @@
                     <div class="alert alert-info">
                         <i class="fas fa-info-circle"></i>
                         За последние 24 часа распознано <strong id="plates_count">0</strong> номерных знаков
+                    </div>
+                    <div class="pagination pagination-horizontal">
+                        <ul>
+                            <li class="page-item">
+                                <a href="#" class="page-link" id="prev_plates_page">
+                                    <i class="fas fa-chevron-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link active">1</a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link">2</a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link">3</a>
+                            </li>
+                            <li class="page-item">
+                                <a href="#" class="page-link" id="next_plates_page">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -1521,16 +1655,14 @@
                                 <th>ID</th>
                                 <th>Имя пользователя</th>
                                 <th>Роль</th>
-                                <th>Статус</th>
                                 <th>Дата создания</th>
-                                <th>Последний вход</th>
                                 <th>Действия</th>
                             </tr>
                             </thead>
                             <tbody id="users_list">
                             <!-- Список пользователей будет добавлен динамически -->
                             <tr>
-                                <td colspan="7" class="text-center">
+                                <td colspan="5" class="text-center">
                                     <div class="loading-container">
                                         <div class="spinner"></div>
                                     </div>
@@ -1540,7 +1672,7 @@
                         </table>
                     </div>
 
-                    <div class="pagination">
+                    <div class="pagination pagination-horizontal">
                         <ul>
                             <li class="page-item">
                                 <a href="#" class="page-link" id="prev_page">
@@ -1601,7 +1733,8 @@
                                 <i class="fas fa-tachometer-alt"></i>
                                 FPS (кадров в секунду)
                             </label>
-                            <input type="number" id="fps-setting" class="form-control" min="1" max="60" step="1" value="5">
+                            <input type="number" id="fps-setting" class="form-control" min="1" max="60" step="1"
+                                   value="5">
                             <small class="form-text">Рекомендуется 1-15</small>
                         </div>
                         <div class="form-group">
@@ -1622,7 +1755,8 @@
                                 <label for="vehicle-type-bus" class="form-check-label">Автобус</label>
                             </div>
                             <div class="form-check">
-                                <input type="checkbox" id="vehicle-type-motorcycle" class="form-check-input" value="motorcycle">
+                                <input type="checkbox" id="vehicle-type-motorcycle" class="form-check-input"
+                                       value="motorcycle">
                                 <label for="vehicle-type-motorcycle" class="form-check-label">Мотоцикл</label>
                             </div>
                         </div>
@@ -2014,45 +2148,30 @@
                     const lastLogin = user.last_login ? new Date(user.last_login) : null;
 
                     row.innerHTML = `
-                        <td>${user.id}</td>
-                        <td>
-                            <div class="user-info">
-                                <div class="user-avatar-sm">${user.username.charAt(0).toUpperCase()}</div>
-                                <div>
-                                    <div class="user-name">${user.username}</div>
-                                    <div class="user-email">${user.email || 'Нет email'}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="badge ${user.role === 'admin' ? 'badge-primary' : 'badge-secondary'}">
-                                ${user.role === 'admin' ? 'Администратор' : 'Пользователь'}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="user-status ${user.is_active ? 'status-active' : 'status-inactive'}">
-                                <i class="fas ${user.is_active ? 'fa-check-circle' : 'fa-times-circle'}"></i>
-                                ${user.is_active ? 'Активный' : 'Неактивный'}
-                            </span>
-                        </td>
-                        <td>${createdAt.toLocaleDateString('ru-RU')}</td>
-                        <td>${lastLogin ? lastLogin.toLocaleString('ru-RU') : 'Никогда'}</td>
-                        <td>
-                            <div class="user-actions">
-                                <button class="action-btn edit-btn" data-id="${user.id}" title="Редактировать">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="action-btn reset-pwd-btn" data-id="${user.id}" title="Сбросить пароль">
-                                    <i class="fas fa-key"></i>
-                                </button>
-                                ${user.id !== currentUserId ? `
-                                <button class="action-btn delete-btn" data-id="${user.id}" title="Удалить">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                ` : ''}
-                            </div>
-                        </td>
-                    `;
+    <td>${user.id}</td>
+    <td>${user.username}</td>
+    <td>
+        <span class="badge ${user.role === 'admin' ? 'badge-primary' : 'badge-secondary'}">
+            ${user.role === 'admin' ? 'Администратор' : 'Пользователь'}
+        </span>
+    </td>
+    <td>${new Date(user.created_at).toLocaleDateString('ru-RU')}</td>
+    <td>
+        <div class="user-actions">
+            <button class="action-btn edit-btn" data-id="${user.id}" title="Редактировать">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn reset-pwd-btn" data-id="${user.id}" title="Сбросить пароль">
+                <i class="fas fa-key"></i>
+            </button>
+            ${user.id !== currentUserId ? `
+            <button class="action-btn delete-btn" data-id="${user.id}" title="Удалить">
+                <i class="fas fa-trash"></i>
+            </button>
+            ` : ''}
+        </div>
+    </td>
+`;
 
                     usersList.appendChild(row);
                 });
@@ -2100,10 +2219,10 @@
         }
     }
 
-    // Обновление пагинации
+    // Обновление пагинации (измененная функция для горизонтальной пагинации)
     function updatePagination(totalUsers, perPage, currentPage) {
         const totalPages = Math.ceil(totalUsers / perPage);
-        const pagination = document.querySelector('.pagination ul');
+        const pagination = document.querySelector('.pagination-horizontal ul');
 
         if (totalPages <= 1) {
             pagination.style.display = 'none';
@@ -2175,8 +2294,8 @@
         pagination.appendChild(nextItem);
 
         // Обработчики событий для пагинации
-        document.querySelectorAll('.page-link:not(.disabled)').forEach(link => {
-            link.addEventListener('click', function(e) {
+        document.querySelectorAll('.pagination-horizontal .page-link:not(.disabled)').forEach(link => {
+            link.addEventListener('click', function (e) {
                 e.preventDefault();
 
                 if (this.id === 'prev_page') {
@@ -2375,14 +2494,14 @@
     }
 
     // Инициализация обработчиков событий
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Загрузка пользователей при открытии вкладки
-        document.querySelector('.menu-link[data-section="users"]').addEventListener('click', function() {
+        document.querySelector('.menu-link[data-section="users"]').addEventListener('click', function () {
             loadUsers();
         });
 
         // Добавление нового пользователя
-        document.getElementById('add_user_btn').addEventListener('click', function() {
+        document.getElementById('add_user_btn').addEventListener('click', function () {
             document.getElementById('userModalTitle').textContent = 'Добавить пользователя';
             document.getElementById('modal_username').value = '';
             document.getElementById('modal_username').disabled = false;
@@ -2403,7 +2522,7 @@
         document.getElementById('save_user_btn').addEventListener('click', saveUser);
 
         // Отмена редактирования
-        document.getElementById('cancel_user_btn').addEventListener('click', function() {
+        document.getElementById('cancel_user_btn').addEventListener('click', function () {
             document.getElementById('userModal').classList.remove('show');
         });
 
@@ -2411,17 +2530,25 @@
         document.getElementById('confirm_reset_btn').addEventListener('click', confirmResetPassword);
 
         // Отмена сброса пароля
-        document.getElementById('cancel_reset_btn').addEventListener('click', function() {
+        document.getElementById('cancel_reset_btn').addEventListener('click', function () {
             document.getElementById('resetPasswordModal').classList.remove('show');
         });
 
         // Обновление списка пользователей
-        document.getElementById('refresh_users_btn').addEventListener('click', function() {
+        document.getElementById('refresh_users_btn').addEventListener('click', function () {
             loadUsers(currentPage, currentFilters);
         });
 
+        // Обновление списка камер
+        var refreshBtn = document.getElementById('refresh_btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function () {
+                updateCamerasList();
+            });
+        }
+
         // Поиск пользователей
-        document.getElementById('users_search').addEventListener('input', function(e) {
+        document.getElementById('users_search').addEventListener('input', function (e) {
             const searchText = e.target.value.trim();
             currentFilters.search = searchText;
 
@@ -2434,7 +2561,7 @@
 
         // Фильтрация пользователей
         document.querySelectorAll('.filter-content input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', function() {
+            checkbox.addEventListener('change', function () {
                 currentFilters.active = document.getElementById('filter_active').checked;
                 currentFilters.inactive = document.getElementById('filter_inactive').checked;
                 currentFilters.admins = document.getElementById('filter_admins').checked;
@@ -2545,6 +2672,148 @@
             });
     }
 
+    // Определяем функцию createCameraElement
+    function createCameraElement(camera) {
+        const cameraEl = document.createElement('div');
+        cameraEl.className = 'camera-card-simple';
+        cameraEl.setAttribute('data-camera-id', camera.id);
+        
+        cameraEl.innerHTML = `
+            <div class="camera-header">
+                <h3 class="camera-title">${camera.name}</h3>
+                <div class="camera-actions">
+                    <button class="btn btn-sm btn-primary view-btn" title="Просмотр">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-sm btn-success connect-btn" title="Подключить">
+                        <i class="fas fa-plug"></i>
+                    </button>
+                    <button class="btn btn-sm btn-warning disconnect-btn" title="Отключить">
+                        <i class="fas fa-unlink"></i>
+                    </button>
+                    <button class="btn btn-sm btn-info edit-btn" title="Редактировать">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger delete-btn" title="Удалить">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="camera-body">
+                <div class="camera-preview">
+                    <img src="${camera.url}" alt="${camera.name}" class="camera-image">
+                </div>
+                <div class="camera-info">
+                    <p class="camera-location">
+                        <i class="fas fa-map-marker-alt"></i> ${camera.location || 'Местоположение не указано'}
+                    </p>
+                    <div class="camera-status">
+                        <div class="status-indicator-simple"></div>
+                        <span class="status-text-simple">Не подключено</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return cameraEl;
+    }
+
+    // Определяем функцию updateCamerasList в глобальной области видимости
+    window.updateCamerasList = function() {
+        const camerasContainer = document.getElementById('cameras_container');
+        if (!camerasContainer) {
+            console.error('Элемент cameras_container не найден');
+            return;
+        }
+
+        fetch('/api/cameras')
+            .then(response => response.json())
+            .then(data => {
+                if (data.cameras && data.cameras.length > 0) {
+                    camerasContainer.innerHTML = '';
+                    data.cameras.forEach(camera => {
+                        const cameraEl = createCameraElement(camera);
+                        camerasContainer.appendChild(cameraEl);
+
+                        if (camera.connected) {
+                            connectCamera(camera.id);
+                        }
+
+                        // Добавляем обработчики событий
+                        const viewBtn = cameraEl.querySelector('.view-btn');
+                        if (viewBtn) {
+                            viewBtn.addEventListener('click', () => {
+                                window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
+                            });
+                        }
+
+                        // Только для администраторов
+                        const isAdmin = document.querySelector('.admin-only').style.display !== 'none';
+                        if (isAdmin) {
+                            const connectBtn = cameraEl.querySelector('.connect-btn');
+                            const disconnectBtn = cameraEl.querySelector('.disconnect-btn');
+                            const editBtn = cameraEl.querySelector('.edit-btn');
+                            const deleteBtn = cameraEl.querySelector('.delete-btn');
+
+                            if (connectBtn) {
+                                connectBtn.addEventListener('click', () => {
+                                    connectCamera(camera.id);
+                                });
+                            }
+
+                            if (disconnectBtn) {
+                                disconnectBtn.addEventListener('click', () => {
+                                    disconnectCamera(camera.id);
+                                });
+                            }
+
+                            if (editBtn) {
+                                editBtn.addEventListener('click', () => {
+                                    editCamera(camera);
+                                });
+                            }
+
+                            if (deleteBtn) {
+                                deleteBtn.addEventListener('click', () => {
+                                    if (confirm(`Удалить камеру "${camera.name}"?`)) {
+                                        deleteCamera(camera.id);
+                                    }
+                                });
+                            }
+                        }
+
+                        const openBtn = cameraEl.querySelector('.open-camera-btn');
+                        if (openBtn) {
+                            openBtn.addEventListener('click', () => {
+                                const cameraUrl = openBtn.getAttribute('data-url');
+                                if (cameraUrl.endsWith('.html')) {
+                                    window.open(cameraUrl, '_blank');
+                                } else {
+                                    window.open(`/camera/${camera.id}`, `camera_${camera.id}`);
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    camerasContainer.innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            Нет добавленных камер. Нажмите "Добавить камеру" для начала работы.
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке камер:', error);
+                camerasContainer.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Ошибка загрузки данных камер
+                    </div>
+                `;
+            });
+    };
+
     // Инициализация при загрузке страницы
     document.addEventListener('DOMContentLoaded', function () {
         checkAdminStatus();
@@ -2591,7 +2860,7 @@
 
             // FPS и типы транспорта
             if (data.fps) document.getElementById('fps-setting').value = data.fps;
-            const types = data.vehicle_types || ['car','truck','bus','motorcycle'];
+            const types = data.vehicle_types || ['car', 'truck', 'bus', 'motorcycle'];
             document.getElementById('vehicle-type-car').checked = types.includes('car');
             document.getElementById('vehicle-type-truck').checked = types.includes('truck');
             document.getElementById('vehicle-type-bus').checked = types.includes('bus');
@@ -3231,7 +3500,9 @@
                         platesList.innerHTML = '';
                         // Группируем по связке
                         const idToPlate = {};
-                        data.plates.forEach(p => { idToPlate[p.id] = p; });
+                        data.plates.forEach(p => {
+                            idToPlate[p.id] = p;
+                        });
                         const shown = new Set();
                         data.plates.forEach(plate => {
                             if (shown.has(plate.id)) return;
@@ -3952,6 +4223,313 @@
                 });
         }
     });
+
+    // Функция для обновления статуса камер
+    function updateCamerasStatus() {
+        fetch('/api/cameras/status')
+            .then(response => response.json())
+            .then(statuses => {
+                // Обновляем статус каждой камеры
+                Object.entries(statuses).forEach(([cameraId, status]) => {
+                    const cameraCard = document.querySelector(`.camera-card-simple[data-camera-id="${cameraId}"]`);
+                    if (cameraCard) {
+                        const statusIndicator = cameraCard.querySelector('.status-indicator-simple');
+                        const statusText = cameraCard.querySelector('.status-text-simple');
+                        const connectBtn = cameraCard.querySelector('.connect-btn');
+                        const disconnectBtn = cameraCard.querySelector('.disconnect-btn');
+
+                        if (statusIndicator && statusText) {
+                            // Обновляем индикатор статуса
+                            statusIndicator.className = 'status-indicator-simple ' +
+                                (status.connected ? 'connected' : 'disconnected');
+
+                            // Обновляем текст статуса
+                            if (status.connected) {
+                                statusText.textContent = status.processing ? 'Обработка' : 'Подключено';
+                                statusText.className = 'status-text-simple ' +
+                                    (status.processing ? 'processing' : 'connected');
+                            } else {
+                                statusText.textContent = 'Не подключено';
+                                statusText.className = 'status-text-simple disconnected';
+                            }
+
+                            // Обновляем состояние кнопок
+                            if (connectBtn) {
+                                connectBtn.disabled = status.connected;
+                            }
+                            if (disconnectBtn) {
+                                disconnectBtn.disabled = !status.connected;
+                            }
+                        }
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка при обновлении статуса камер:', error);
+            });
+    }
+
+    // Запускаем периодическое обновление статуса камер
+    document.addEventListener('DOMContentLoaded', function () {
+        // Первое обновление сразу после загрузки страницы
+        updateCamerasStatus();
+
+        // Затем обновляем каждые 2 секунды
+        setInterval(updateCamerasStatus, 2000);
+    });
+
+    // Функция для загрузки настроек видео
+    function loadVideoSettings() {
+        fetch('/api/settings')
+            .then(response => response.json())
+            .then(data => {
+                const videoSettings = data.video_processing || {};
+
+                // ROI настройки
+                const roiEnabled = document.getElementById('roi-enabled');
+                const roiSettings = document.getElementById('roi-settings');
+                roiEnabled.checked = videoSettings.roi?.enabled || false;
+                roiSettings.style.display = roiEnabled.checked ? 'block' : 'none';
+                document.getElementById('roi-x').value = videoSettings.roi?.x || 0;
+                document.getElementById('roi-y').value = videoSettings.roi?.y || 0;
+                document.getElementById('roi-width').value = videoSettings.roi?.width || 100;
+                document.getElementById('roi-height').value = videoSettings.roi?.height || 100;
+
+                // Яркость и контраст
+                const bcEnabled = document.getElementById('brightness-contrast-enabled');
+                const bcSettings = document.getElementById('brightness-contrast-settings');
+                bcEnabled.checked = (videoSettings.brightness?.enabled || videoSettings.contrast?.enabled) || false;
+                bcSettings.style.display = bcEnabled.checked ? 'block' : 'none';
+                document.getElementById('brightness-value').value = (videoSettings.brightness?.value || 0) * 100;
+                document.getElementById('contrast-value').value = (videoSettings.contrast?.value || 1.0) * 100;
+                updateBrightnessContrastDisplay();
+
+                // Пропуск кадров
+                const frameSkipEnabled = document.getElementById('frame-skip-enabled');
+                const frameSkipSettings = document.getElementById('frame-skip-settings');
+                frameSkipEnabled.checked = videoSettings.frame_skip?.enabled || false;
+                frameSkipSettings.style.display = frameSkipEnabled.checked ? 'block' : 'none';
+                document.getElementById('frame-skip-value').value = videoSettings.frame_skip?.value || 1;
+            });
+    }
+
+    // Функция для обновления отображения значений яркости и контраста
+    function updateBrightnessContrastDisplay() {
+        const brightnessValue = document.getElementById('brightness-value').value;
+        const contrastValue = document.getElementById('contrast-value').value;
+        document.getElementById('brightness-value-display').textContent = brightnessValue;
+        document.getElementById('contrast-value-display').textContent = (contrastValue / 100).toFixed(1);
+    }
+
+    // Функция для сохранения настроек видео
+    function saveVideoSettings() {
+        const videoSettings = {
+            roi: {
+                enabled: document.getElementById('roi-enabled').checked,
+                x: parseInt(document.getElementById('roi-x').value),
+                y: parseInt(document.getElementById('roi-y').value),
+                width: parseInt(document.getElementById('roi-width').value),
+                height: parseInt(document.getElementById('roi-height').value)
+            },
+            brightness: {
+                enabled: document.getElementById('brightness-contrast-enabled').checked,
+                value: parseInt(document.getElementById('brightness-value').value) / 100
+            },
+            contrast: {
+                enabled: document.getElementById('brightness-contrast-enabled').checked,
+                value: parseInt(document.getElementById('contrast-value').value) / 100
+            },
+            frame_skip: {
+                enabled: document.getElementById('frame-skip-enabled').checked,
+                value: parseInt(document.getElementById('frame-skip-value').value)
+            }
+        };
+
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                video_processing: videoSettings
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showAlert('Настройки видео успешно сохранены', 'success');
+                } else {
+                    showAlert('Ошибка при сохранении настроек видео', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                showAlert('Ошибка при сохранении настроек видео', 'danger');
+            });
+    }
+
+    // Обработчики событий
+    document.addEventListener('DOMContentLoaded', function () {
+        // Загружаем настройки при открытии модального окна
+        document.getElementById('settingsModal').addEventListener('show.bs.modal', loadVideoSettings);
+
+        // Обработчики переключателей
+        document.getElementById('roi-enabled').addEventListener('change', function () {
+            document.getElementById('roi-settings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('brightness-contrast-enabled').addEventListener('change', function () {
+            document.getElementById('brightness-contrast-settings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('frame-skip-enabled').addEventListener('change', function () {
+            document.getElementById('frame-skip-settings').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Обработчики слайдеров яркости и контраста
+        document.getElementById('brightness-value').addEventListener('input', updateBrightnessContrastDisplay);
+        document.getElementById('contrast-value').addEventListener('input', updateBrightnessContrastDisplay);
+
+        // Обработчик сохранения настроек
+        document.getElementById('save_settings_btn').addEventListener('click', function () {
+            saveVideoSettings();
+        });
+    });
+
+    window.updateCamerasList = updateCamerasList;
+
+    // Обновление пагинации для распознанных номеров
+    function updatePlatesPagination(totalPlates, perPage, currentPage) {
+        const totalPages = Math.ceil(totalPlates / perPage);
+        const pagination = document.querySelector('#plates-section .pagination-horizontal ul');
+
+        if (totalPages <= 1) {
+            pagination.style.display = 'none';
+            return;
+        }
+
+        pagination.style.display = 'flex';
+        pagination.innerHTML = '';
+
+        // Кнопка "Назад"
+        const prevItem = document.createElement('li');
+        prevItem.className = 'page-item';
+        prevItem.innerHTML = `
+            <a href="#" class="page-link ${currentPage === 1 ? 'disabled' : ''}" id="prev_plates_page">
+                <i class="fas fa-chevron-left"></i>
+            </a>
+        `;
+        pagination.appendChild(prevItem);
+
+        // Нумерация страниц
+        const startPage = Math.max(1, currentPage - 2);
+        const endPage = Math.min(totalPages, currentPage + 2);
+
+        if (startPage > 1) {
+            const firstItem = document.createElement('li');
+            firstItem.className = 'page-item';
+            firstItem.innerHTML = `<a href="#" class="page-link">1</a>`;
+            pagination.appendChild(firstItem);
+
+            if (startPage > 2) {
+                const ellipsisItem = document.createElement('li');
+                ellipsisItem.className = 'page-item disabled';
+                ellipsisItem.innerHTML = `<span class="page-link">...</span>`;
+                pagination.appendChild(ellipsisItem);
+            }
+        }
+
+        for (let i = startPage; i <= endPage; i++) {
+            const pageItem = document.createElement('li');
+            pageItem.className = 'page-item';
+            pageItem.innerHTML = `
+                <a href="#" class="page-link ${i === currentPage ? 'active' : ''}">${i}</a>
+            `;
+            pagination.appendChild(pageItem);
+        }
+
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                const ellipsisItem = document.createElement('li');
+                ellipsisItem.className = 'page-item disabled';
+                ellipsisItem.innerHTML = `<span class="page-link">...</span>`;
+                pagination.appendChild(ellipsisItem);
+            }
+
+            const lastItem = document.createElement('li');
+            lastItem.className = 'page-item';
+            lastItem.innerHTML = `<a href="#" class="page-link">${totalPages}</a>`;
+            pagination.appendChild(lastItem);
+        }
+
+        // Кнопка "Вперед"
+        const nextItem = document.createElement('li');
+        nextItem.className = 'page-item';
+        nextItem.innerHTML = `
+            <a href="#" class="page-link ${currentPage === totalPages ? 'disabled' : ''}" id="next_plates_page">
+                <i class="fas fa-chevron-right"></i>
+            </a>
+        `;
+        pagination.appendChild(nextItem);
+
+        // Обработчики событий для пагинации
+        document.querySelectorAll('#plates-section .pagination-horizontal .page-link:not(.disabled)').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+
+                if (this.id === 'prev_plates_page') {
+                    loadPlates(currentPage - 1, currentFilters);
+                } else if (this.id === 'next_plates_page') {
+                    loadPlates(currentPage + 1, currentFilters);
+                } else {
+                    const pageNum = parseInt(this.textContent);
+                    if (!isNaN(pageNum)) {
+                        loadPlates(pageNum, currentFilters);
+                    }
+                }
+            });
+        });
+    }
+
+    // Обновляем функцию loadPlates для работы с пагинацией
+    async function loadPlates(page = 1, filters = {}) {
+        const platesList = document.getElementById('plates_list');
+        platesList.innerHTML = '<div class="loading-container"><div class="spinner"></div></div>';
+
+        try {
+            const response = await fetch(`/api/plates?page=${page}&per_page=10${buildFiltersQuery(filters)}`);
+            const data = await response.json();
+
+            if (data.plates && data.plates.length > 0) {
+                platesList.innerHTML = '';
+                data.plates.forEach(plate => {
+                    const plateEl = createPlateElement(plate);
+                    platesList.appendChild(plateEl);
+                });
+
+                // Обновляем пагинацию
+                updatePlatesPagination(data.total, 10, page);
+            } else {
+                platesList.innerHTML = `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Нет распознанных номеров за выбранный период
+                    </div>
+                `;
+            }
+
+            // Обновляем счетчик
+            document.getElementById('plates_count').textContent = data.total || 0;
+        } catch (error) {
+            console.error('Ошибка при загрузке номеров:', error);
+            platesList.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i>
+                    Ошибка загрузки данных
+                </div>
+            `;
+        }
+    }
 </script>
 </body>
 </html>

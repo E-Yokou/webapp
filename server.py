@@ -24,6 +24,8 @@ from util import read_license_plate, get_car, is_plate_inside_car, get_plate_cen
 import io
 import xlsxwriter
 import re
+import requests
+from PIL import Image, ImageDraw, ImageFont
 
 app = Flask(__name__)
 
@@ -349,7 +351,10 @@ def update_user_password(user_id, new_password):
 
 def initialize_models():
     global coco_model, license_plate_detector, mot_tracker
+    # Инициализируем модель с ограничением классов
     coco_model = YOLO('models/yolo11n.pt').to('cuda' if torch.cuda.is_available() else 'cpu')
+    # Устанавливаем только нужные классы (2:car, 3:motorcycle, 5:bus, 7:truck)
+    coco_model.classes = [2, 3, 5, 7]
     license_plate_detector = YOLO('models/license_plate_detector.pt').to('cuda' if torch.cuda.is_available() else 'cpu')
     mot_tracker = Sort()
 
@@ -519,15 +524,50 @@ def is_trailer_plate(plate_text, region='ru'):
 def process_frame(frame, camera_id=None):
     try:
         start_time = time.time()
+        
+        # Получаем настройки камеры
+        camera_settings = None
+        for camera in config.get('cameras', []):
+            if camera.get('id') == camera_id:
+                camera_settings = camera.get('settings', {})
+                break
+        
+        if not camera_settings:
+            camera_settings = {
+                'roi': {'enabled': False, 'x': 0, 'y': 0, 'width': 100, 'height': 100},
+                'brightness': 0,
+                'contrast': 0,
+                'frame_skip': {'enabled': False, 'interval': 1}
+            }
 
-        # Vehicle detection
+        # Apply ROI
+        if camera_settings['roi']['enabled']:
+            height, width = frame.shape[:2]
+            x = int(camera_settings['roi']['x'] * width / 100)
+            y = int(camera_settings['roi']['y'] * height / 100)
+            w = int(camera_settings['roi']['width'] * width / 100)
+            h = int(camera_settings['roi']['height'] * height / 100)
+            # Ensure ROI is within frame bounds
+            x = max(0, min(x, width - 1))
+            y = max(0, min(y, height - 1))
+            w = max(1, min(w, width - x))
+            h = max(1, min(h, height - y))
+            frame = frame[y:y + h, x:x + w]
+
+        # Apply brightness and contrast
+        if camera_settings['brightness'] != 0 or camera_settings['contrast'] != 0:
+            brightness = camera_settings['brightness']
+            contrast = camera_settings['contrast'] / 100.0 + 1.0  # Convert to scale factor
+            frame = cv2.convertScaleAbs(frame, alpha=contrast, beta=brightness)
+
+        # Vehicle detection - теперь модель уже настроена только на транспортные средства
         vehicle_detections = coco_model(frame)[0]
         vehicle_boxes = []
-        vehicle_types = []  # Новый список для хранения типа транспорта
+        vehicle_types = []
         allowed_types = config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle'])
+        
         for detection in vehicle_detections.boxes.data.tolist():
             x1, y1, x2, y2, score, class_id = detection
-            # Определяем тип транспорта
             if int(class_id) == 2:
                 vtype = 'Легковое авто'
                 vtype_key = 'car'
@@ -541,12 +581,9 @@ def process_frame(frame, camera_id=None):
                 vtype = 'Мотоцикл'
                 vtype_key = 'motorcycle'
             else:
-                vtype = 'Неизвестно'
-                vtype_key = None
-            # Фильтрация по выбранным типам транспорта
-            if vtype_key and vtype_key not in allowed_types:
-                continue
-            if int(class_id) in vehicles:
+                continue  # Пропускаем все остальные классы
+                
+            if vtype_key in allowed_types:
                 vehicle_boxes.append([x1, y1, x2, y2, score])
                 vehicle_types.append(vtype)
 
@@ -695,15 +732,42 @@ def process_frame(frame, camera_id=None):
             if plate_info:
                 cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                 text = f"{plate_info['plate_text']} ({plate_info['plate_score']:.2f})"
-                (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2)
-                cv2.rectangle(frame,
-                              (int(x1), int(y1) - text_height - 10),
-                              (int(x1) + text_width + 10, int(y1)),
-                              (0, 0, 255), -1)
-                cv2.putText(frame, text,
-                            (int(x1) + 5, int(y1) - 5),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.7,
-                            (255, 255, 255), 2)
+                
+                # Создаем PIL изображение для текста
+                pil_image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                draw = ImageDraw.Draw(pil_image)
+
+                try:
+                    font = ImageFont.truetype("DejaVuSans.ttf", 24, encoding='utf-8')
+                except:
+                    font = ImageFont.load_default()
+
+                # Рассчитываем размер текста
+                text_bbox = draw.textbbox((0, 0), text, font=font)
+                text_width = text_bbox[2] - text_bbox[0]
+                text_height = text_bbox[3] - text_bbox[1]
+
+                # Позиция над bounding box
+                text_x = int(x1)
+                text_y = int(y1) - text_height - 10
+
+                # Рисуем прямоугольник фона
+                draw.rectangle(
+                    [(text_x - 5, text_y - 5),
+                     (text_x + text_width + 5, text_y + text_height + 5)],
+                    fill=(0, 0, 255)  # Синий фон
+                )
+
+                # Рисуем текст
+                draw.text(
+                    (text_x, text_y),
+                    text,
+                    font=font,
+                    fill=(255, 255, 255)  # Белый текст
+                )
+
+                # Конвертируем обратно в OpenCV формат
+                frame = cv2.cvtColor(np.array(pil_image), cv2.COLOR_RGB2BGR)
 
         # Calculate and display FPS
         fps = 1.0 / (time.time() - start_time)
@@ -754,157 +818,283 @@ def camera_processing(camera_id, camera_url, stop_event):
     camera_states[camera_id] = {
         'connected': False,
         'last_activity': datetime.now().isoformat(),
-        'error_count': 0
+        'error_count': 0,
+        'reconnect_attempts': 0
     }
 
     cap = None
     video_writer = None
+    consecutive_errors = 0
+    MAX_CONSECUTIVE_ERRORS = 5
+    MAX_RECONNECT_ATTEMPTS = 10
+    RECONNECT_DELAY = 5  # секунд
+    last_image_time = 0
+    image_update_interval = 0.3  # 300ms для HTML-камер
+    last_frame_time = 0  # Время последнего полученного кадра
+    frame_interval = 0.1  # Уменьшаем интервал до 100ms
 
-    try:
-        logging.info(f"Инициализация обработки камеры {camera_id} ({camera_url})")
-
-        # Удаляем параметры из URL для MJPEG потока
-        clean_url = camera_url.split('?')[0] if '?' in camera_url else camera_url
-        logging.info(f"Очищенный URL камеры: {clean_url}")
-
-        # Параметры для стабильного подключения
-        cap = cv2.VideoCapture(clean_url)
-
-        # Устанавливаем параметры для стабильной работы
+    def cleanup():
+        nonlocal cap, video_writer
         try:
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 3)  # Увеличиваем размер буфера
-            cap.set(cv2.CAP_PROP_FPS, 15)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 960)  # Устанавливаем разрешение из URL
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        except AttributeError as e:
-            logging.warning(f"Некоторые свойства камеры недоступны: {str(e)}")
+            if video_writer is not None:
+                video_writer.release()
+                video_writer = None
 
-        # Увеличиваем таймаут подключения
-        timeout = 30  # секунд
-        start_time = time.time()
+            if cap is not None:
+                try:
+                    if cap.isOpened():
+                        cap.release()
+                except:
+                    pass
+                cap = None
 
-        while not cap.isOpened():
-            if time.time() - start_time > timeout:
-                logging.error(f"Таймаут подключения к камере {camera_id}")
-                camera_states[camera_id].update({
-                    'connected': False,
-                    'last_error': 'Timeout при подключении'
-                })
-                return
-            time.sleep(0.5)
+            if camera_id in camera_instances:
+                del camera_instances[camera_id]
 
-        # Проверяем, что камера действительно подключена
-        ret, frame = cap.read()
-        if not ret:
-            logging.error(f"Не удалось получить кадр от камеры {camera_id}")
             camera_states[camera_id].update({
                 'connected': False,
-                'last_error': 'Не удалось получить кадр'
+                'processing': False,
+                'shutdown_time': datetime.now().isoformat()
             })
-            return
+        except Exception as cleanup_error:
+            logging.error(f"Ошибка при очистке ресурсов камеры {camera_id}: {str(cleanup_error)}")
 
-        # Успешное подключение
-        camera_states[camera_id].update({
-            'connected': True,
-            'last_activity': datetime.now().isoformat(),
-            'error_count': 0
-        })
-
-        frame_queue = queue.Queue(maxsize=5)  # Увеличиваем размер очереди
-
-        # Сохраняем экземпляр камеры
-        camera_instances[camera_id] = {
-            'cap': cap,
-            'frame_queue': frame_queue,
-            'stop_event': stop_event,
-            'thread': threading.current_thread(),
-            'recording': False,
-            'video_writer': None,
-            'recording_file': None,
-            'last_frame_time': time.time()
-        }
-
-        logging.info(f"Камера {camera_id} успешно активирована")
-
-        # Основной цикл обработки
-        while not stop_event.is_set():
-            try:
-                # Чтение кадра
-                ret, frame = cap.read()
-                current_time = time.time()
-
-                if not ret:
-                    error_msg = f"Камера {camera_id} вернула пустой кадр"
-                    logging.warning(error_msg)
-                    camera_states[camera_id]['error_count'] += 1
-                    camera_states[camera_id]['last_error'] = error_msg
-
-                    # Попытка восстановления
-                    if camera_states[camera_id]['error_count'] > 5:
-                        logging.warning(f"Переподключение камеры {camera_id}...")
-                        cap.release()
-                        cap = cv2.VideoCapture(clean_url)
-                        if not cap.isOpened():
-                            raise ConnectionError(f"Не удалось переподключиться к камере {camera_id}")
-                        camera_instances[camera_id]['cap'] = cap
-                        camera_states[camera_id]['error_count'] = 0
-
-                    time.sleep(0.5)
-                    continue
-
-                # Успешное получение кадра
+    def connect_camera():
+        nonlocal cap
+        try:
+            # Определяем тип камеры
+            is_html_camera = camera_url.endswith('.html')
+            
+            if is_html_camera:
+                # Для HTML-камер создаем специальный обработчик
+                camera_instances[camera_id] = {
+                    'stop_event': stop_event,
+                    'thread': threading.current_thread(),
+                    'recording': False,
+                    'video_writer': None,
+                    'recording_file': None,
+                    'last_frame_time': time.time(),
+                    'is_html_camera': True,
+                    'url': camera_url,
+                    'last_frame': None
+                }
+                
+                # Успешное подключение для HTML-камеры
                 camera_states[camera_id].update({
                     'connected': True,
                     'last_activity': datetime.now().isoformat(),
                     'error_count': 0,
-                    'fps': 1 / (current_time - camera_instances[camera_id]['last_frame_time'])
+                    'reconnect_attempts': 0
                 })
-                camera_instances[camera_id]['last_frame_time'] = current_time
+                
+                logging.info(f"HTML-камера {camera_id} успешно инициализирована")
+                return True
+            else:
+                # Для IP-камер
+                clean_url = camera_url.split('?')[0] if '?' in camera_url else camera_url
+                logging.info(f"Подключение к IP-камере {camera_id} по адресу: {clean_url}")
 
-                # Обработка кадра
-                processed_frame = process_frame(frame, camera_id)
-
-                # Запись видео если активирована
-                if camera_instances[camera_id].get('recording'):
-                    try:
-                        if video_writer is None:
-                            fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                            try:
-                                fps = cap.get(cv2.CAP_PROP_FPS)
-                            except:
-                                fps = 15
-
-                            try:
-                                width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                                height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                            except:
-                                width, height = 960, 720
-
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            filename = f"recording_{camera_id}_{timestamp}.avi"
-                            filepath = os.path.join(RECORDINGS_DIR, filename)
-                            video_writer = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
-                            camera_instances[camera_id]['video_writer'] = video_writer
-                            camera_instances[camera_id]['recording_file'] = filepath
-
-                        video_writer.write(processed_frame)
-                    except Exception as e:
-                        logging.error(f"Ошибка записи видео: {str(e)}")
-                        camera_instances[camera_id]['recording'] = False
-
-                # Добавление кадра в очередь
+                cap = cv2.VideoCapture(clean_url)
+                
+                # Устанавливаем параметры для стабильной работы
                 try:
-                    _, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
-                    frame_queue.put(buffer.tobytes(), timeout=0.5)
-                except queue.Full:
-                    logging.warning(f"Очередь кадров камеры {camera_id} переполнена")
-                except Exception as e:
-                    logging.error(f"Ошибка кодирования кадра: {str(e)}")
+                    cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Уменьшаем размер буфера
+                    cap.set(cv2.CAP_PROP_FPS, 15)
+                    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 960)
+                    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+                except AttributeError as e:
+                    logging.warning(f"Некоторые свойства камеры недоступны: {str(e)}")
+
+                # Проверяем подключение
+                if not cap.isOpened():
+                    raise Exception("Не удалось открыть видеопоток")
+
+                # Проверяем, что камера действительно подключена
+                ret, frame = cap.read()
+                if not ret or frame is None:
+                    raise Exception("Не удалось получить кадр от камеры")
+
+                camera_instances[camera_id] = {
+                    'cap': cap,
+                    'stop_event': stop_event,
+                    'thread': threading.current_thread(),
+                    'recording': False,
+                    'video_writer': None,
+                    'recording_file': None,
+                    'last_frame_time': time.time(),
+                    'last_frame': None
+                }
+
+                camera_states[camera_id].update({
+                    'connected': True,
+                    'last_activity': datetime.now().isoformat(),
+                    'error_count': 0,
+                    'reconnect_attempts': 0
+                })
+
+                logging.info(f"IP-камера {camera_id} успешно подключена")
+                return True
+
+        except Exception as e:
+            logging.error(f"Ошибка подключения к камере {camera_id}: {str(e)}")
+            cleanup()
+            return False
+
+    try:
+        # Первоначальное подключение
+        if not connect_camera():
+            return
+
+        while not stop_event.is_set():
+            try:
+                if camera_instances[camera_id].get('is_html_camera'):
+                    # Обработка HTML-камеры
+                    try:
+                        current_time = time.time()
+                        if current_time - last_image_time < image_update_interval:
+                            time.sleep(0.1)
+                            continue
+
+                        response = requests.get(camera_url, timeout=5)
+                        if response.status_code != 200:
+                            raise requests.RequestException(f"HTTP {response.status_code}")
+
+                        img_response = requests.get(camera_url, stream=True, timeout=5)
+                        if img_response.status_code != 200:
+                            raise requests.RequestException(f"HTTP {img_response.status_code}")
+
+                        image_array = np.asarray(bytearray(img_response.content), dtype=np.uint8)
+                        frame = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+                        
+                        if frame is None:
+                            raise ValueError("Не удалось декодировать изображение")
+
+                        processed_frame = process_frame(frame, camera_id)
+                        
+                        camera_states[camera_id].update({
+                            'connected': True,
+                            'processing': True,
+                            'last_activity': datetime.now().isoformat(),
+                            'error_count': 0,
+                            'fps': 1 / (current_time - camera_instances[camera_id]['last_frame_time'])
+                        })
+                        camera_instances[camera_id]['last_frame_time'] = current_time
+                        camera_instances[camera_id]['last_frame'] = processed_frame
+                        last_image_time = current_time
+
+                        if camera_instances[camera_id].get('recording'):
+                            try:
+                                if video_writer is None:
+                                    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                                    fps = int(1 / image_update_interval)
+                                    height, width = processed_frame.shape[:2]
+                                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                                    filename = f"recording_{camera_id}_{timestamp}.avi"
+                                    filepath = os.path.join(RECORDINGS_DIR, filename)
+                                    video_writer = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+                                    camera_instances[camera_id]['video_writer'] = video_writer
+                                    camera_instances[camera_id]['recording_file'] = filepath
+                                
+                                video_writer.write(processed_frame)
+                            except Exception as e:
+                                logging.error(f"Ошибка записи видео: {str(e)}")
+                                camera_instances[camera_id]['recording'] = False
+
+                    except Exception as frame_error:
+                        logging.error(f"Ошибка обработки кадра HTML-камеры: {str(frame_error)}")
+                        camera_states[camera_id]['error_count'] += 1
+                        camera_states[camera_id]['last_error'] = str(frame_error)
+                        
+                        if camera_states[camera_id]['error_count'] >= MAX_CONSECUTIVE_ERRORS:
+                            logging.warning(f"Превышено максимальное количество ошибок для камеры {camera_id}, переподключение...")
+                            cleanup()
+                            if camera_states[camera_id]['reconnect_attempts'] < MAX_RECONNECT_ATTEMPTS:
+                                camera_states[camera_id]['reconnect_attempts'] += 1
+                                time.sleep(RECONNECT_DELAY)
+                                if connect_camera():
+                                    continue
+                            else:
+                                logging.error(f"Превышено максимальное количество попыток переподключения для камеры {camera_id}")
+                                break
+                        time.sleep(1)
+                        continue
+
+                else:
+                    # Обработка IP-камеры
+                    if not cap or not cap.isOpened():
+                        raise Exception("Камера отключена")
+
+                    current_time = time.time()
+                    # Проверяем, прошло ли достаточно времени с последнего кадра
+                    if current_time - last_frame_time >= frame_interval:
+                        # Очищаем буфер камеры перед чтением нового кадра
+                        for _ in range(5):  # Пропускаем несколько кадров из буфера
+                            cap.grab()
+
+                    ret, frame = cap.read()
+                    if not ret or frame is None:
+                        raise Exception("Получен пустой кадр")
+
+                    processed_frame = process_frame(frame, camera_id)
+
+                    camera_states[camera_id].update({
+                        'connected': True,
+                        'processing': True,
+                        'last_activity': datetime.now().isoformat(),
+                        'error_count': 0,
+                        'fps': 1 / (current_time - camera_instances[camera_id]['last_frame_time'])
+                    })
+                    camera_instances[camera_id]['last_frame_time'] = current_time
+                    camera_instances[camera_id]['last_frame'] = processed_frame
+                    last_frame_time = current_time
+
+                    if camera_instances[camera_id].get('recording'):
+                        try:
+                            if video_writer is None:
+                                fourcc = cv2.VideoWriter_fourcc(*'XVID')
+                                try:
+                                    fps = cap.get(cv2.CAP_PROP_FPS)
+                                except:
+                                    fps = 15
+
+                                try:
+                                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                                except:
+                                    width, height = 960, 720
+
+                                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                                filename = f"recording_{camera_id}_{timestamp}.avi"
+                                filepath = os.path.join(RECORDINGS_DIR, filename)
+                                video_writer = cv2.VideoWriter(filepath, fourcc, fps, (width, height))
+                                camera_instances[camera_id]['video_writer'] = video_writer
+                                camera_instances[camera_id]['recording_file'] = filepath
+
+                            video_writer.write(processed_frame)
+                        except Exception as e:
+                            logging.error(f"Ошибка записи видео: {str(e)}")
+                            camera_instances[camera_id]['recording'] = False
+                    else:
+                        # Если секунда еще не прошла, делаем небольшую паузу
+                        time.sleep(0.1)
 
             except Exception as frame_error:
-                logging.error(f"Ошибка обработки кадра: {str(frame_error)}")
+                logging.error(f"Ошибка обработки кадра камеры {camera_id}: {str(frame_error)}")
+                camera_states[camera_id]['error_count'] += 1
                 camera_states[camera_id]['last_error'] = str(frame_error)
-                time.sleep(1)  # Защита от зацикливания
+                
+                if camera_states[camera_id]['error_count'] >= MAX_CONSECUTIVE_ERRORS:
+                    logging.warning(f"Превышено максимальное количество ошибок для камеры {camera_id}, переподключение...")
+                    cleanup()
+                    if camera_states[camera_id]['reconnect_attempts'] < MAX_RECONNECT_ATTEMPTS:
+                        camera_states[camera_id]['reconnect_attempts'] += 1
+                        time.sleep(RECONNECT_DELAY)
+                        if connect_camera():
+                            continue
+                    else:
+                        logging.error(f"Превышено максимальное количество попыток переподключения для камеры {camera_id}")
+                        break
+                time.sleep(1)
 
     except Exception as main_error:
         logging.critical(f"Критическая ошибка обработки камеры {camera_id}: {str(main_error)}")
@@ -914,62 +1104,43 @@ def camera_processing(camera_id, camera_url, stop_event):
         })
 
     finally:
-        # Корректное завершение
-        logging.info(f"Завершение обработки камеры {camera_id}")
-
-        try:
-            if video_writer is not None:
-                video_writer.release()
-
-            if cap is not None:
-                try:
-                    if cap.isOpened():
-                        cap.release()
-                except:
-                    pass
-
-            if camera_id in camera_instances:
-                del camera_instances[camera_id]
-
-            camera_states[camera_id]['connected'] = False
-            camera_states[camera_id]['shutdown_time'] = datetime.now().isoformat()
-
-        except Exception as cleanup_error:
-            logging.error(f"Ошибка при завершении: {str(cleanup_error)}")
-
+        cleanup()
 
 def gen_camera_frames(camera_id):
     while True:
         if camera_id in camera_instances:
             try:
-                frame_data = camera_instances[camera_id]['frame_queue'].get(timeout=1)
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
-            except queue.Empty:
-                continue
+                last_frame = camera_instances[camera_id].get('last_frame')
+                if last_frame is not None:
+                    _, buffer = cv2.imencode('.jpg', last_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                time.sleep(0.01)  # Уменьшаем задержку до 10ms
+            except Exception as e:
+                logging.error(f"Ошибка генерации кадра для камеры {camera_id}: {str(e)}")
+                time.sleep(0.1)
         else:
             time.sleep(0.1)
-
 
 def generate_combined_feed():
     while True:
-        frames = []
-        for camera_id, instance in camera_instances.items():
-            try:
-                frame_data = instance['frame_queue'].get(timeout=0.1)
-                frames.append((camera_id, frame_data))
-            except queue.Empty:
-                continue
+        try:
+            frames = []
+            for camera_id, instance in camera_instances.items():
+                last_frame = instance.get('last_frame')
+                if last_frame is not None:
+                    frames.append((camera_id, last_frame))
 
-        if frames:
-            # Here you can implement logic to combine frames or select one to display
-            # For simplicity, we'll just show the first available frame
-            camera_id, frame_data = frames[0]
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_data + b'\r\n')
-        else:
+            if frames:
+                # Выбираем первый доступный кадр
+                camera_id, frame = frames[0]
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                yield (b'--frame\r\n'
+                       b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            time.sleep(0.033)  # ~30 FPS
+        except Exception as e:
+            logging.error(f"Ошибка генерации комбинированного потока: {str(e)}")
             time.sleep(0.1)
-
 
 @app.route('/')
 def index():
@@ -1160,7 +1331,13 @@ def manage_settings():
             'max_age': config.get('max_age', 30),
             'delete_before_date': config.get('delete_before_date', ''),
             'fps': config.get('fps', 15),
-            'vehicle_types': config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle'])
+            'vehicle_types': config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle']),
+            'video_processing': config.get('video_processing', {
+                'roi': {'enabled': False, 'x': 0, 'y': 0, 'width': 100, 'height': 100},
+                'brightness': {'enabled': False, 'value': 0},
+                'contrast': {'enabled': False, 'value': 1.0},
+                'frame_skip': {'enabled': False, 'value': 1}
+            })
         })
 
     elif request.method == 'POST':
@@ -1175,7 +1352,13 @@ def manage_settings():
             'max_age': int(data.get('max_age', config.get('max_age', 30))),
             'delete_before_date': data.get('delete_before_date', config.get('delete_before_date', '')),
             'fps': int(data.get('fps', config.get('fps', 15))),
-            'vehicle_types': data.get('vehicle_types', config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle']))
+            'vehicle_types': data.get('vehicle_types', config.get('vehicle_types', ['car', 'truck', 'bus', 'motorcycle'])),
+            'video_processing': data.get('video_processing', config.get('video_processing', {
+                'roi': {'enabled': False, 'x': 0, 'y': 0, 'width': 100, 'height': 100},
+                'brightness': {'enabled': False, 'value': 0},
+                'contrast': {'enabled': False, 'value': 1.0},
+                'frame_skip': {'enabled': False, 'value': 1}
+            }))
         })
         save_config(config)
         return jsonify({'status': 'success'})
@@ -1267,10 +1450,43 @@ def manage_cameras():
 @app.route('/api/cameras/status')
 def get_cameras_status():
     statuses = {}
-    for camera_id, instance in camera_instances.items():
+    for camera_id in config['cameras']:
+        camera_id = camera_id['id']
+        status = camera_states.get(camera_id, {'connected': False})
+        
+        # Проверяем реальное состояние камеры
+        if camera_id in camera_instances:
+            instance = camera_instances[camera_id]
+            if 'cap' in instance:
+                # Проверяем, открыта ли камера и получаем кадр
+                if instance['cap'].isOpened():
+                    ret, _ = instance['cap'].read()
+                    if ret:
+                        status['connected'] = True
+                        status['last_activity'] = datetime.now().isoformat()
+                    else:
+                        status['connected'] = False
+                        status['last_error'] = 'Не удалось получить кадр'
+                else:
+                    status['connected'] = False
+                    status['last_error'] = 'Камера не открыта'
+            else:
+                status['connected'] = False
+                status['last_error'] = 'Экземпляр камеры не инициализирован'
+        else:
+            status['connected'] = False
+            status['last_error'] = 'Камера не найдена в списке активных'
+            
+        # Определяем статус processing
+        is_processing = camera_id in camera_instances and not camera_instances[camera_id]['stop_event'].is_set() if camera_id in camera_instances else False
+        
+        # Если камера обрабатывает кадры, она должна считаться подключенной
+        if is_processing:
+            status['connected'] = True
+            
         statuses[camera_id] = {
-            'connected': instance['cap'].isOpened() if 'cap' in instance else False,
-            'processing': not instance['stop_event'].is_set() if 'stop_event' in instance else False
+            'connected': status['connected'],
+            'processing': is_processing
         }
     return jsonify(statuses)
 
@@ -1427,8 +1643,8 @@ def main_video_processing():
                     # For main feed, we process directly in the generator
                 except Exception as e:
                     logging.error(f"Error processing main frame: {e}")
-        else:
-            time.sleep(0.1)
+        # else:
+        #     time.sleep(0.1)
 
 
 def role_required(role):
@@ -1880,28 +2096,265 @@ def get_top_plates():
     return jsonify({'top_plates': top_plates})
 
 
+@app.route('/api/process_html_image/<int:camera_id>')
+@login_required
+def process_html_image(camera_id):
+    """Обрабатывает изображение от HTML-камеры"""
+    try:
+        # Получаем URL изображения из параметров
+        image_url = request.args.get('url')
+        if not image_url:
+            return jsonify({'status': 'error', 'message': 'URL изображения не указан'}), 400
+
+        # Проверяем, что это действительно HTML-камера
+        camera = next((cam for cam in config['cameras'] if cam['id'] == camera_id), None)
+        if not camera or not camera['url'].endswith('.html'):
+            return jsonify({'status': 'error', 'message': 'Неверный тип камеры'}), 400
+
+        # Обновляем статус камеры
+        camera_states[camera_id] = {
+            'connected': True,
+            'processing': True,
+            'last_activity': datetime.now().isoformat(),
+            'error_count': 0
+        }
+
+        # Загружаем изображение с таймаутом
+        try:
+            response = requests.get(image_url, timeout=5, verify=False)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            logging.error(f"Ошибка загрузки изображения с {image_url}: {str(e)}")
+            camera_states[camera_id].update({
+                'connected': False,
+                'processing': False,
+                'last_error': f'Ошибка загрузки изображения: {str(e)}'
+            })
+            return jsonify({'status': 'error', 'message': 'Не удалось загрузить изображение'}), 400
+
+        # Конвертируем в формат OpenCV
+        try:
+            image_array = np.asarray(bytearray(response.content), dtype=np.uint8)
+            frame = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+
+            if frame is None:
+                raise ValueError("Не удалось декодировать изображение")
+        except Exception as e:
+            logging.error(f"Ошибка обработки изображения: {str(e)}")
+            camera_states[camera_id].update({
+                'connected': False,
+                'processing': False,
+                'last_error': f'Ошибка обработки изображения: {str(e)}'
+            })
+            return jsonify({'status': 'error', 'message': 'Не удалось обработать изображение'}), 400
+
+        # Обрабатываем кадр через нейронные сети
+        try:
+            processed_frame = process_frame(frame, camera_id)
+        except Exception as e:
+            logging.error(f"Ошибка обработки кадра нейронными сетями: {str(e)}")
+            camera_states[camera_id].update({
+                'connected': True,
+                'processing': False,
+                'last_error': f'Ошибка обработки нейронными сетями: {str(e)}'
+            })
+            # Возвращаем оригинальный кадр в случае ошибки обработки
+            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            return Response(buffer.tobytes(), mimetype='image/jpeg')
+
+        # Конвертируем обратно в JPEG
+        try:
+            _, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+            return Response(buffer.tobytes(), mimetype='image/jpeg')
+        except Exception as e:
+            logging.error(f"Ошибка кодирования обработанного кадра: {str(e)}")
+            camera_states[camera_id].update({
+                'connected': True,
+                'processing': False,
+                'last_error': f'Ошибка кодирования кадра: {str(e)}'
+            })
+            return jsonify({'status': 'error', 'message': 'Ошибка кодирования кадра'}), 500
+
+    except Exception as e:
+        logging.error(f"Неожиданная ошибка обработки HTML-изображения: {str(e)}")
+        if camera_id in camera_states:
+            camera_states[camera_id].update({
+                'connected': False,
+                'processing': False,
+                'last_error': f'Неожиданная ошибка: {str(e)}'
+            })
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+@app.route('/api/camera/settings', methods=['GET'])
+@login_required
+def get_camera_settings():
+    try:
+        camera_id = request.args.get('camera_id')
+        if not camera_id:
+            return jsonify({'error': 'Не указан ID камеры'}), 400
+
+        # Получаем настройки из config.json
+        camera_settings = None
+        for camera in config.get('cameras', []):
+            if camera.get('id') == int(camera_id):
+                camera_settings = camera.get('settings', {})
+                break
+
+        if not camera_settings:
+            return jsonify({'error': 'Камера не найдена'}), 404
+
+        # Преобразуем формат настроек для фронтенда
+        settings = {
+            'roi_enabled': camera_settings['roi']['enabled'],
+            'roi_x': camera_settings['roi']['x'],
+            'roi_y': camera_settings['roi']['y'],
+            'roi_width': camera_settings['roi']['width'],
+            'roi_height': camera_settings['roi']['height'],
+            'brightness': camera_settings['brightness'],
+            'contrast': camera_settings['contrast'],
+            'frame_skip_enabled': camera_settings['frame_skip']['enabled'],
+            'frame_skip_interval': camera_settings['frame_skip']['interval']
+        }
+
+        return jsonify(settings)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/camera/settings', methods=['POST'])
+@login_required
+def update_camera_settings():
+    try:
+        data = request.json
+        if not data or 'camera_id' not in data:
+            return jsonify({'error': 'Не указан ID камеры'}), 400
+
+        camera_id = int(data['camera_id'])
+        
+        # Находим камеру в конфигурации
+        camera_found = False
+        for camera in config.get('cameras', []):
+            if camera.get('id') == camera_id:
+                camera_found = True
+                # Обновляем настройки
+                camera['settings'] = {
+                    'roi': {
+                        'enabled': data.get('roi_enabled', False),
+                        'x': data.get('roi_x', 0),
+                        'y': data.get('roi_y', 0),
+                        'width': data.get('roi_width', 100),
+                        'height': data.get('roi_height', 100)
+                    },
+                    'brightness': data.get('brightness', 0),
+                    'contrast': data.get('contrast', 0),
+                    'frame_skip': {
+                        'enabled': data.get('frame_skip_enabled', False),
+                        'interval': data.get('frame_skip_interval', 1)
+                    }
+                }
+                break
+
+        if not camera_found:
+            return jsonify({'error': 'Камера не найдена'}), 404
+
+        # Валидация значений
+        settings = camera['settings']
+        if not isinstance(settings['roi']['enabled'], bool):
+            return jsonify({'error': 'roi_enabled должен быть булевым значением'}), 400
+
+        if not isinstance(settings['frame_skip']['enabled'], bool):
+            return jsonify({'error': 'frame_skip_enabled должен быть булевым значением'}), 400
+
+        for field in ['x', 'y', 'width', 'height']:
+            if not isinstance(settings['roi'][field], int) or settings['roi'][field] < 0 or settings['roi'][field] > 100:
+                return jsonify({'error': f'roi_{field} должен быть целым числом от 0 до 100'}), 400
+
+        for field in ['brightness', 'contrast']:
+            if not isinstance(settings[field], int) or settings[field] < -100 or settings[field] > 100:
+                return jsonify({'error': f'{field} должен быть целым числом от -100 до 100'}), 400
+
+        if not isinstance(settings['frame_skip']['interval'], int) or settings['frame_skip']['interval'] < 1 or settings['frame_skip']['interval'] > 10:
+            return jsonify({'error': 'frame_skip_interval должен быть целым числом от 1 до 10'}), 400
+
+        # Сохраняем конфигурацию
+        save_config(config)
+
+        # Преобразуем настройки для ответа
+        response_settings = {
+            'roi_enabled': settings['roi']['enabled'],
+            'roi_x': settings['roi']['x'],
+            'roi_y': settings['roi']['y'],
+            'roi_width': settings['roi']['width'],
+            'roi_height': settings['roi']['height'],
+            'brightness': settings['brightness'],
+            'contrast': settings['contrast'],
+            'frame_skip_enabled': settings['frame_skip']['enabled'],
+            'frame_skip_interval': settings['frame_skip']['interval']
+        }
+
+        return jsonify({'success': True, 'settings': response_settings})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/camera/settings/reset', methods=['POST'])
+@login_required
+def reset_camera_settings():
+    try:
+        camera_id = request.args.get('camera_id')
+        if not camera_id:
+            return jsonify({'error': 'Не указан ID камеры'}), 400
+
+        camera_id = int(camera_id)
+        
+        # Находим камеру в конфигурации
+        camera_found = False
+        for camera in config.get('cameras', []):
+            if camera.get('id') == camera_id:
+                camera_found = True
+                # Сбрасываем настройки к значениям по умолчанию
+                camera['settings'] = {
+                    'roi': {
+                        'enabled': False,
+                        'x': 0,
+                        'y': 0,
+                        'width': 100,
+                        'height': 100
+                    },
+                    'brightness': 0,
+                    'contrast': 0,
+                    'frame_skip': {
+                        'enabled': False,
+                        'interval': 1
+                    }
+                }
+                break
+
+        if not camera_found:
+            return jsonify({'error': 'Камера не найдена'}), 404
+
+        # Сохраняем конфигурацию
+        save_config(config)
+
+        # Преобразуем настройки для ответа
+        settings = camera['settings']
+        response_settings = {
+            'roi_enabled': settings['roi']['enabled'],
+            'roi_x': settings['roi']['x'],
+            'roi_y': settings['roi']['y'],
+            'roi_width': settings['roi']['width'],
+            'roi_height': settings['roi']['height'],
+            'brightness': settings['brightness'],
+            'contrast': settings['contrast'],
+            'frame_skip_enabled': settings['frame_skip']['enabled'],
+            'frame_skip_interval': settings['frame_skip']['interval']
+        }
+
+        return jsonify({'success': True, 'settings': response_settings})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Инициализация базы данных
     init_db()
     initialize_models()
-    try:
-        # Auto-connect main camera if set
-        if config['current_camera'] is not None:
-            camera = next((cam for cam in config['cameras'] if cam['id'] == config['current_camera']), None)
-            if camera:
-                main_cap = cv2.VideoCapture(camera['url'])
-                if main_cap.isOpened():
-                    main_processing_thread = threading.Thread(target=main_video_processing)
-                    main_processing_thread.start()
-
-        app.run(host='0.0.0.0', port=5000, threaded=True)
-    finally:
-        stop_event.set()
-        if main_cap and main_cap.isOpened():
-            main_cap.release()
-        if main_processing_thread:
-            main_processing_thread.join()
-        for camera_id, instance in list(camera_instances.items()):
-            instance['stop_event'].set()
-            if 'thread' in instance:
-                instance['thread'].join()
+    
+    app.run(host='0.0.0.0', port=5000, threaded=True)

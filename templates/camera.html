@@ -16,63 +16,179 @@
             --light: #ecf0f1;
             --dark: #2c3e50;
             --white: #ffffff;
+            --black: #000000;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --glass: rgba(0, 0, 0, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.15);
+            --sidebar-width: 300px;
+            --control-size: 56px;
+            --z-overlay: 10;
+            --z-controls: 20;
+            --z-sidebar: 30;
+            --z-settings: 40;
+            --z-notification: 1000;
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
 
         body {
-            background-color: #000;
+            background-color: var(--black);
             color: var(--white);
             height: 100vh;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        .camera-container {
-            position: relative;
-            width: 100%;
+        /* Глобальные анимации */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes slideInLeft {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+
+        /* Основной контейнер приложения */
+        .app-container {
+            display: flex;
             height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Боковая панель */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--glass);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            z-index: var(--z-sidebar);
+            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.2);
+            animation: slideInLeft 0.5s ease-out;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(calc(var(--sidebar-width) * -1 + 60px));
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            right: -15px;
+            top: 20px;
+            background: var(--secondary);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            z-index: calc(var(--z-sidebar) + 1);
+            transition: var(--transition);
+            border: 2px solid var(--white);
+        }
+
+        .sidebar-toggle:hover {
+            transform: scale(1.1);
+            background: var(--info);
+        }
+
+        /* Контейнер камеры */
+        .camera-container {
+            flex: 1;
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            background-color: var(--black);
+        }
+
+        /* Видео поток */
+        .video-wrapper {
+            position: relative;
+            display: inline-block;
+            max-width: 100%;
+            max-height: 100%;
+            transition: var(--transition);
         }
 
         .camera-feed {
             max-width: 100%;
-            max-height: 100%;
+            max-height: 100vh;
             object-fit: contain;
             transition: transform 0.3s ease;
             transform-origin: center center;
+            cursor: crosshair;
+            display: block;
+            filter: brightness(1) contrast(1);
         }
 
+        /* Оверлей загрузки */
         .camera-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.8);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 10;
+            z-index: var(--z-overlay);
+            animation: fadeIn 0.5s ease;
         }
 
+        /* Информация о камере */
         .camera-info {
             position: absolute;
             top: 20px;
             left: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 15px;
-            border-radius: 8px;
-            z-index: 20;
+            background-color: var(--glass);
+            padding: 15px 20px;
+            border-radius: 12px;
+            z-index: var(--z-controls);
             max-width: 80%;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.5s ease;
         }
 
         .camera-title {
@@ -82,12 +198,18 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            color: var(--white);
+        }
+
+        .camera-title i {
+            color: var(--secondary);
         }
 
         .camera-url {
             font-size: 0.9rem;
-            color: #ccc;
+            color: rgba(255, 255, 255, 0.7);
             word-break: break-all;
+            font-family: 'Fira Code', monospace;
         }
 
         .camera-status {
@@ -103,67 +225,92 @@
             height: 12px;
             border-radius: 50%;
             background-color: var(--danger);
+            box-shadow: 0 0 10px var(--danger);
         }
 
         .status-indicator.connected {
             background-color: var(--success);
+            box-shadow: 0 0 10px var(--success);
             animation: pulse 1.5s infinite;
         }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-
+        /* Элементы управления */
         .camera-controls {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             gap: 15px;
-            z-index: 20;
-            background-color: rgba(0, 0, 0, 0.7);
-            padding: 10px 15px;
+            z-index: var(--z-controls);
+            background-color: var(--glass);
+            padding: 10px 20px;
             border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            animation: fadeIn 0.5s ease;
         }
 
         .control-btn {
-            width: 50px;
-            height: 50px;
+            width: var(--control-size);
+            height: var(--control-size);
             border-radius: 50%;
             background-color: rgba(255, 255, 255, 0.1);
             border: none;
             color: var(--white);
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition);
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .control-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+            opacity: 0;
+            transition: var(--transition);
         }
 
         .control-btn:hover {
             background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .control-btn:hover::before {
+            opacity: 1;
         }
 
         .control-btn.primary {
             background-color: var(--secondary);
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
         }
 
         .control-btn.primary:hover {
             background-color: #2980b9;
+            box-shadow: 0 0 20px rgba(52, 152, 219, 0.7);
         }
 
         .control-btn.danger {
             background-color: var(--danger);
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
         }
 
         .control-btn.danger:hover {
             background-color: #c0392b;
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.7);
         }
 
+        /* Спиннер загрузки */
         .spinner {
             width: 50px;
             height: 50px;
@@ -174,57 +321,65 @@
             margin-bottom: 20px;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
         .loading-text {
             font-size: 1.1rem;
             margin-top: 10px;
-            color: #ccc;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
         }
 
+        /* Индикатор записи */
         .recording-indicator {
             position: absolute;
             top: 20px;
             right: 20px;
             background-color: var(--danger);
             color: var(--white);
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-size: 0.8rem;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.9rem;
             display: flex;
             align-items: center;
-            gap: 5px;
-            z-index: 20;
-            animation: blink 1.5s infinite;
+            gap: 8px;
+            z-index: var(--z-controls);
+            animation: blink 1.5s infinite, float 3s ease-in-out infinite;
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
         }
 
-        @keyframes blink {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
+        .recording-indicator::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background-color: var(--white);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
         }
 
+        /* Временная метка */
         .timestamp {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
+            bottom: 30px;
+            right: 30px;
+            background-color: var(--glass);
             color: var(--white);
-            padding: 5px 10px;
-            border-radius: 4px;
+            padding: 8px 15px;
+            border-radius: 50px;
             font-size: 0.9rem;
-            z-index: 20;
+            z-index: var(--z-controls);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+            font-family: 'Fira Code', monospace;
         }
 
+        /* Кнопка полноэкранного режима */
         .fullscreen-btn {
             position: absolute;
             top: 20px;
             right: 20px;
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: var(--glass);
             color: var(--white);
-            border: none;
+            border: 1px solid var(--glass-border);
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -232,63 +387,834 @@
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            z-index: 20;
-            transition: all 0.3s ease;
+            z-index: var(--z-controls);
+            transition: var(--transition);
+            backdrop-filter: blur(10px);
+            box-shadow: var(--shadow);
         }
 
         .fullscreen-btn:hover {
-            background-color: rgba(0, 0, 0, 0.9);
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        /* Панель настроек */
+        .settings-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: var(--glass);
+            padding: 20px;
+            border-radius: 15px;
+            width: 380px;
+            z-index: var(--z-settings);
+            display: none;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(15px);
+            border: 1px solid var(--glass-border);
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .settings-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--white);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .settings-title i {
+            color: var(--secondary);
+        }
+
+        .settings-close {
+            background: none;
+            border: none;
+            color: var(--white);
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            transition: var(--transition);
+            opacity: 0.7;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .settings-close:hover {
+            color: var(--danger);
+            transform: rotate(90deg);
+            background-color: rgba(255, 255, 255, 0.1);
+            opacity: 1;
+        }
+
+        .settings-group {
+            margin-bottom: 25px;
+        }
+
+        .settings-group-title {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .settings-item {
+            margin-bottom: 18px;
+        }
+
+        .settings-label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .settings-input {
+            width: 100%;
+            padding: 12px 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            color: var(--white);
+            font-size: 0.95rem;
+            transition: var(--transition);
+        }
+
+        .settings-input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+        }
+
+        .settings-checkbox {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: var(--secondary);
+            position: relative;
+        }
+
+        .settings-checkbox::after {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border-radius: 4px;
+            background-color: rgba(52, 152, 219, 0.2);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .settings-checkbox:checked::after {
+            opacity: 1;
+        }
+
+        .settings-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .settings-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .settings-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--secondary);
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .settings-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        .settings-value {
+            min-width: 45px;
+            text-align: center;
+            font-size: 0.95rem;
+            font-family: 'Fira Code', monospace;
+            color: var(--white);
+        }
+
+        .settings-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 25px;
+        }
+
+        .settings-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            transition: var(--transition);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .settings-btn.primary {
+            background-color: var(--secondary);
+            color: var(--white);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .settings-btn.primary:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+
+        .settings-btn.secondary {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--white);
+            border: 1px solid var(--glass-border);
+        }
+
+        .settings-btn.secondary:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* ROI элементы */
+        .roi-overlay {
+            position: absolute;
+            border: 2px dashed rgba(0, 255, 0, 0.8);
+            background-color: rgba(0, 255, 0, 0.1);
+            pointer-events: none;
+            display: none;
+            z-index: calc(var(--z-overlay) + 5);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .roi-selection {
+            position: absolute;
+            border: 2px dashed rgba(255, 0, 0, 0.8);
+            background-color: rgba(255, 0, 0, 0.1);
+            pointer-events: none;
+            display: none;
+            z-index: calc(var(--z-overlay) + 6);
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .roi-handle {
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            background-color: var(--secondary);
+            border-radius: 50%;
+            z-index: calc(var(--z-overlay) + 7);
+            cursor: move;
+            display: none;
+            border: 2px solid var(--white);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+            transition: var(--transition);
+        }
+
+        .roi-handle:hover {
+            transform: scale(1.3);
+            background-color: var(--info);
+        }
+
+        .roi-handle.nw { top: -7px; left: -7px; cursor: nw-resize; }
+        .roi-handle.ne { top: -7px; right: -7px; cursor: ne-resize; }
+        .roi-handle.sw { bottom: -7px; left: -7px; cursor: sw-resize; }
+        .roi-handle.se { bottom: -7px; right: -7px; cursor: se-resize; }
+
+        /* Стили боковой панели */
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 1.1rem;
+            color: var(--secondary);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+        }
+
+        .sidebar-list {
+            list-style: none;
+        }
+
+        .sidebar-list li {
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: var(--transition);
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .sidebar-list li:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .sidebar-list li.active {
+            background-color: rgba(52, 152, 219, 0.2);
+            color: var(--secondary);
+            font-weight: 500;
+            border-left: 3px solid var(--secondary);
+        }
+
+        .sidebar-list li i {
+            width: 22px;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            background-color: var(--glass);
+            color: white;
+            padding: 18px 22px;
+            border-radius: 12px;
+            z-index: var(--z-notification);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: var(--shadow);
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            max-width: 350px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            border-left: 4px solid var(--success);
+        }
+
+        .notification.error {
+            border-left: 4px solid var(--danger);
+        }
+
+        .notification.warning {
+            border-left: 4px solid var(--warning);
+        }
+
+        .notification-icon {
+            font-size: 1.4rem;
+        }
+
+        .notification.success .notification-icon {
+            color: var(--success);
+        }
+
+        .notification.error .notification-icon {
+            color: var(--danger);
+        }
+
+        .notification.warning .notification-icon {
+            color: var(--warning);
+        }
+
+        .notification-message {
+            flex: 1;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .notification-close {
+            margin-left: 15px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: var(--transition);
+            font-size: 1rem;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .notification-close:hover {
+            opacity: 1;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Пресеты */
+        .presets-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .preset-btn {
+            padding: 10px 15px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: var(--white);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95rem;
+            border: 1px solid transparent;
+        }
+
+        .preset-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .preset-btn.active {
+            background-color: var(--secondary);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .preset-btn i {
+            font-size: 1rem;
+            width: 22px;
+            text-align: center;
+        }
+
+        .roi-presets {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .roi-preset {
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid transparent;
+        }
+
+        .roi-preset:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .roi-preset.active {
+            background-color: var(--secondary);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3);
+        }
+
+        /* Подсказки */
+        .tooltip {
+            position: absolute;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            z-index: var(--z-notification);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            backdrop-filter: blur(5px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow);
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                z-index: var(--z-sidebar);
+                transform: translateX(-100%);
+                width: 80%;
+                max-width: 300px;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .sidebar-toggle {
+                display: none;
+            }
+
+            .mobile-menu-btn {
+                display: block;
+                position: absolute;
+                left: 15px;
+                top: 15px;
+                z-index: calc(var(--z-controls) + 1);
+                background-color: var(--glass);
+                border: 1px solid var(--glass-border);
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                backdrop-filter: blur(5px);
+                box-shadow: var(--shadow);
+            }
+
+            .settings-panel {
+                width: calc(100% - 40px);
+                max-width: 400px;
+                right: 20px;
+                left: 20px;
+                margin: 0 auto;
+            }
+
+            .camera-controls {
+                bottom: 20px;
+                padding: 8px 15px;
+            }
+
+            .control-btn {
+                width: 48px;
+                height: 48px;
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Эффекты при наведении */
+        .hover-grow {
+            transition: var(--transition);
+        }
+
+        .hover-grow:hover {
+            transform: scale(1.05);
+        }
+
+        /* Специальные классы для анимаций */
+        .animate-pop {
+            animation: pop 0.3s ease;
+        }
+
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Кастомный скроллбар */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
 <body>
-    <div class="camera-container">
-        <div class="camera-info">
-            <div class="camera-title">
-                <i class="fas fa-video"></i>
-                <span id="camera_name">Камера</span>
+    <div class="app-container">
+        <!-- Боковая панель -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" id="sidebarToggle">
+                <i class="fas fa-chevron-left"></i>
             </div>
-            <div class="camera-url" id="camera_url"></div>
-            <div class="camera-status">
-                <span class="status-indicator" id="status_indicator"></span>
-                <span id="status_text">Подключение...</span>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-video"></i> Камеры
+                </div>
+                <ul class="sidebar-list" id="cameraList">
+                    <!-- Камеры будут добавлены через JS -->
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-history"></i> Последние события
+                </div>
+                <ul class="sidebar-list" id="recentEvents">
+                    <!-- События будут добавлены через JS -->
+                </ul>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-title">
+                    <i class="fas fa-sliders-h"></i> Быстрые настройки
+                </div>
+                <div class="presets-container">
+                    <button class="preset-btn hover-grow" id="presetFullFrame">
+                        <i class="fas fa-expand"></i> Весь кадр
+                    </button>
+                    <button class="preset-btn hover-grow" id="presetLeftHalf">
+                        <i class="fas fa-align-left"></i> Левая половина
+                    </button>
+                    <button class="preset-btn hover-grow" id="presetRightHalf">
+                        <i class="fas fa-align-right"></i> Правая половина
+                    </button>
+                    <button class="preset-btn hover-grow" id="presetCenterSquare">
+                        <i class="fas fa-square"></i> Центральный квадрат
+                    </button>
+                </div>
             </div>
         </div>
 
-        <img class="camera-feed" id="video_feed" src="">
+        <!-- Основной контейнер с видео -->
+        <div class="camera-container">
+            <!-- Информация о камере -->
+            <div class="camera-info">
+                <div class="camera-title">
+                    <i class="fas fa-video"></i>
+                    <span id="camera_name">Камера</span>
+                </div>
+                <div class="camera-url" id="camera_url"></div>
+                <div class="camera-status">
+                    <span class="status-indicator" id="status_indicator"></span>
+                    <span id="status_text">Подключение...</span>
+                </div>
+            </div>
 
-        <div class="camera-overlay" id="camera_overlay">
-            <div class="spinner"></div>
-            <div class="loading-text">Подключение к камере...</div>
-        </div>
+            <!-- Видео поток и ROI элементы -->
+            <div class="video-wrapper">
+                <img class="camera-feed" id="video_feed" src="">
+                <div class="roi-overlay" id="roi_overlay"></div>
+                <div class="roi-selection" id="roi_selection"></div>
+                <div class="roi-handle nw" id="roi_handle_nw"></div>
+                <div class="roi-handle ne" id="roi_handle_ne"></div>
+                <div class="roi-handle sw" id="roi_handle_sw"></div>
+                <div class="roi-handle se" id="roi_handle_se"></div>
+            </div>
 
-        <div class="camera-controls">
-            <button class="control-btn" id="zoom_in_btn" title="Увеличить">
-                <i class="fas fa-search-plus"></i>
+            <!-- Оверлей загрузки -->
+            <div class="camera-overlay" id="camera_overlay">
+                <div class="spinner"></div>
+                <div class="loading-text">Подключение к камере...</div>
+            </div>
+
+            <!-- Панель управления -->
+            <div class="camera-controls">
+                <button class="control-btn hover-grow" id="zoom_in_btn" title="Увеличить">
+                    <i class="fas fa-search-plus"></i>
+                </button>
+                <button class="control-btn hover-grow" id="zoom_out_btn" title="Уменьшить">
+                    <i class="fas fa-search-minus"></i>
+                </button>
+                <button class="control-btn hover-grow" id="settingsBtn" title="Настройки">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="control-btn primary hover-grow" id="recordBtn" title="Начать запись">
+                    <i class="fas fa-record-vinyl"></i>
+                </button>
+                <button class="control-btn hover-grow" id="snapshotBtn" title="Сделать снимок">
+                    <i class="fas fa-camera"></i>
+                </button>
+                <button class="control-btn danger hover-grow" id="disconnect_btn" title="Отключиться">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+
+            <!-- Временная метка -->
+            <div class="timestamp" id="timestamp"></div>
+
+            <!-- Кнопка полноэкранного режима -->
+            <button class="fullscreen-btn hover-grow" id="fullscreen_btn" title="Полноэкранный режим">
+                <i class="fas fa-expand"></i>
             </button>
-            <button class="control-btn" id="zoom_out_btn" title="Уменьшить">
-                <i class="fas fa-search-minus"></i>
-            </button>
-<!--            <button class="control-btn primary" id="record_btn" title="Запись">-->
-<!--                <i class="fas fa-circle"></i>-->
-<!--            </button>-->
-<!--            <button class="control-btn" id="snapshot_btn" title="Снимок">-->
-<!--                <i class="fas fa-camera"></i>-->
-<!--            </button>-->
-<!--            <button class="control-btn danger" id="disconnect_btn" title="Отключиться">-->
-<!--                <i class="fas fa-power-off"></i>-->
-<!--            </button>-->
+
+            <!-- Панель настроек -->
+            <div class="settings-panel" id="settingsPanel">
+                <div class="settings-header">
+                    <div class="settings-title">
+                        <i class="fas fa-sliders-h"></i> Настройки обработки
+                    </div>
+                    <button class="settings-close hover-grow" id="settingsClose">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-crop-alt"></i> Область интереса (ROI)
+                    </div>
+                    <div class="settings-item">
+                        <label class="settings-label">
+                            <input type="checkbox" class="settings-checkbox" id="roiEnabled">
+                            Включить ROI
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-label">Пресеты ROI</div>
+                        <div class="roi-presets">
+                            <div class="roi-preset hover-grow" data-preset="0,0,100,100">Весь кадр</div>
+                            <div class="roi-preset hover-grow" data-preset="0,0,50,100">Левая половина</div>
+                            <div class="roi-preset hover-grow" data-preset="50,0,50,100">Правая половина</div>
+                            <div class="roi-preset hover-grow" data-preset="25,25,50,50">Центр</div>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">X: </label>
+                            <input type="range" class="settings-slider" id="roiX" min="0" max="100" value="0">
+                            <span class="settings-value" id="roiXValue">0%</span>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">Y: </label>
+                            <input type="range" class="settings-slider" id="roiY" min="0" max="100" value="0">
+                            <span class="settings-value" id="roiYValue">0%</span>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">Ширина: </label>
+                            <input type="range" class="settings-slider" id="roiWidth" min="0" max="100" value="100">
+                            <span class="settings-value" id="roiWidthValue">100%</span>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">Высота: </label>
+                            <input type="range" class="settings-slider" id="roiHeight" min="0" max="100" value="100">
+                            <span class="settings-value" id="roiHeightValue">100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-adjust"></i> Коррекция изображения
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">Яркость: </label>
+                            <input type="range" class="settings-slider" id="brightness" min="-100" max="100" value="0">
+                            <span class="settings-value" id="brightnessValue">0</span>
+                        </div>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">Контраст: </label>
+                            <input type="range" class="settings-slider" id="contrast" min="-100" max="100" value="0">
+                            <span class="settings-value" id="contrastValue">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-group-title">
+                        <i class="fas fa-film"></i> Обработка кадров
+                    </div>
+                    <div class="settings-item">
+                        <label class="settings-label">
+                            <input type="checkbox" class="settings-checkbox" id="frameSkipEnabled">
+                            Пропуск кадров
+                        </label>
+                    </div>
+                    <div class="settings-item">
+                        <div class="settings-slider-container">
+                            <label class="settings-label">Интервал: </label>
+                            <input type="range" class="settings-slider" id="frameSkipInterval" min="1" max="10" value="1">
+                            <span class="settings-value" id="frameSkipIntervalValue">1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-buttons">
+                    <button class="settings-btn secondary hover-grow" id="resetSettings">
+                        <i class="fas fa-undo"></i> Сбросить
+                    </button>
+                    <button class="settings-btn primary hover-grow" id="saveSettings">
+                        <i class="fas fa-save"></i> Сохранить
+                    </button>
+                </div>
+            </div>
         </div>
-
-        <div class="timestamp" id="timestamp"></div>
-
-        <button class="fullscreen-btn" id="fullscreen_btn" title="Полноэкранный режим">
-            <i class="fas fa-expand"></i>
-        </button>
     </div>
 
+    <!-- Всплывающая подсказка -->
+    <div class="tooltip" id="tooltip"></div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             // Получаем ID камеры из URL
             const cameraId = window.location.pathname.split('/').pop();
             const videoFeed = document.getElementById('video_feed');
@@ -300,15 +1226,203 @@
             const timestamp = document.getElementById('timestamp');
             const disconnectBtn = document.getElementById('disconnect_btn');
             const fullscreenBtn = document.getElementById('fullscreen_btn');
-            const recordBtn = document.getElementById('record_btn');
-            const snapshotBtn = document.getElementById('snapshot_btn');
+            const recordBtn = document.getElementById('recordBtn');
+            const snapshotBtn = document.getElementById('snapshotBtn');
             const zoomInBtn = document.getElementById('zoom_in_btn');
             const zoomOutBtn = document.getElementById('zoom_out_btn');
+            const settingsBtn = document.getElementById('settingsBtn');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const settingsClose = document.getElementById('settingsClose');
+            const saveSettings = document.getElementById('saveSettings');
+            const resetSettings = document.getElementById('resetSettings');
+            const videoWrapper = document.querySelector('.video-wrapper');
+            const roiOverlay = document.getElementById('roi_overlay');
+            const roiSelection = document.getElementById('roi_selection');
+            const roiHandleNW = document.getElementById('roi_handle_nw');
+            const roiHandleNE = document.getElementById('roi_handle_ne');
+            const roiHandleSW = document.getElementById('roi_handle_sw');
+            const roiHandleSE = document.getElementById('roi_handle_se');
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const cameraList = document.getElementById('cameraList');
+            const recentEvents = document.getElementById('recentEvents');
+            const presetFullFrame = document.getElementById('presetFullFrame');
+            const presetLeftHalf = document.getElementById('presetLeftHalf');
+            const presetRightHalf = document.getElementById('presetRightHalf');
+            const presetCenterSquare = document.getElementById('presetCenterSquare');
+            const roiPresets = document.querySelectorAll('.roi-preset');
+            const tooltip = document.getElementById('tooltip');
 
             let isRecording = false;
             let isFullscreen = false;
             let recordingInterval = null;
             let zoomLevel = 1;
+            let htmlCameraUpdateInterval = null;
+            let isSelecting = false;
+            let isDragging = false;
+            let isResizing = false;
+            let resizeHandle = null;
+            let startX, startY, endX, endY;
+            let currentRoi = { x: 0, y: 0, width: 100, height: 100 };
+            let videoDimensions = { width: 0, height: 0 };
+
+            // Элементы настроек
+            const roiEnabled = document.getElementById('roiEnabled');
+            const roiX = document.getElementById('roiX');
+            const roiY = document.getElementById('roiY');
+            const roiWidth = document.getElementById('roiWidth');
+            const roiHeight = document.getElementById('roiHeight');
+            const roiXValue = document.getElementById('roiXValue');
+            const roiYValue = document.getElementById('roiYValue');
+            const roiWidthValue = document.getElementById('roiWidthValue');
+            const roiHeightValue = document.getElementById('roiHeightValue');
+            const brightness = document.getElementById('brightness');
+            const contrast = document.getElementById('contrast');
+            const brightnessValue = document.getElementById('brightnessValue');
+            const contrastValue = document.getElementById('contrastValue');
+            const frameSkipEnabled = document.getElementById('frameSkipEnabled');
+            const frameSkipInterval = document.getElementById('frameSkipInterval');
+            const frameSkipIntervalValue = document.getElementById('frameSkipIntervalValue');
+
+            // Инициализация
+            init();
+
+            function init() {
+                setupEventListeners();
+                loadCameraList();
+                loadRecentEvents();
+                updateVideoDimensions();
+                window.addEventListener('resize', updateVideoDimensions);
+            }
+
+            function setupEventListeners() {
+                // Основные элементы управления
+                disconnectBtn.addEventListener('click', disconnectCamera);
+                fullscreenBtn.addEventListener('click', toggleFullscreen);
+                recordBtn.addEventListener('click', toggleRecording);
+                snapshotBtn.addEventListener('click', takeSnapshot);
+                zoomInBtn.addEventListener('click', zoomIn);
+                zoomOutBtn.addEventListener('click', zoomOut);
+                settingsBtn.addEventListener('click', toggleSettingsPanel);
+                settingsClose.addEventListener('click', closeSettingsPanel);
+                sidebarToggle.addEventListener('click', toggleSidebar);
+
+                // Обработчики полноэкранного режима
+                document.addEventListener('fullscreenchange', updateFullscreenStatus);
+                document.addEventListener('webkitfullscreenchange', updateFullscreenStatus);
+                document.addEventListener('msfullscreenchange', updateFullscreenStatus);
+
+                // Настройки ROI
+                roiEnabled.addEventListener('change', updateRoiDisplay);
+                roiX.addEventListener('input', updateRoiFromControls);
+                roiY.addEventListener('input', updateRoiFromControls);
+                roiWidth.addEventListener('input', updateRoiFromControls);
+                roiHeight.addEventListener('input', updateRoiFromControls);
+
+                // Пресеты ROI
+                presetFullFrame.addEventListener('click', () => setRoiPreset(0, 0, 100, 100));
+                presetLeftHalf.addEventListener('click', () => setRoiPreset(0, 0, 50, 100));
+                presetRightHalf.addEventListener('click', () => setRoiPreset(50, 0, 50, 100));
+                presetCenterSquare.addEventListener('click', () => setRoiPreset(25, 25, 50, 50));
+
+                roiPresets.forEach(preset => {
+                    preset.addEventListener('click', function() {
+                        const [x, y, w, h] = this.dataset.preset.split(',').map(Number);
+                        setRoiPreset(x, y, w, h);
+                    });
+                });
+
+                // Другие настройки
+                brightness.addEventListener('input', () => brightnessValue.textContent = brightness.value);
+                contrast.addEventListener('input', () => contrastValue.textContent = contrast.value);
+                frameSkipInterval.addEventListener('input', () => frameSkipIntervalValue.textContent = frameSkipInterval.value);
+
+                saveSettings.addEventListener('click', saveCameraSettings);
+                resetSettings.addEventListener('click', resetCameraSettings);
+
+                // Обработчики для ROI
+                videoFeed.addEventListener('mousedown', startRoiSelection);
+                videoFeed.addEventListener('mousemove', handleRoiMouseMove);
+                videoFeed.addEventListener('mouseup', endRoiSelection);
+                videoFeed.addEventListener('mouseleave', cancelRoiSelection);
+
+                // Обработчики для ручек изменения размера ROI
+                [roiHandleNW, roiHandleNE, roiHandleSW, roiHandleSE].forEach(handle => {
+                    handle.addEventListener('mousedown', startRoiResize);
+                });
+
+                // Периодическая проверка статуса камеры
+                setInterval(checkCameraStatus, 5000);
+            }
+
+            function loadCameraList() {
+                fetch('/api/cameras')
+                    .then(response => response.json())
+                    .then(data => {
+                        cameraList.innerHTML = '';
+                        data.cameras.forEach(camera => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                <i class="fas fa-video"></i>
+                                <span>${camera.name}</span>
+                            `;
+                            if (camera.id == cameraId) {
+                                li.classList.add('active');
+                            } else {
+                                li.addEventListener('click', () => {
+                                    window.location.href = `/camera/${camera.id}`;
+                                });
+                            }
+                            cameraList.appendChild(li);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Ошибка загрузки списка камер:', error);
+                    });
+            }
+
+            function loadRecentEvents() {
+                fetch('/api/recent_plates')
+                    .then(response => response.json())
+                    .then(data => {
+                        recentEvents.innerHTML = '';
+                        data.plates.slice(0, 5).forEach(plate => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `
+                                <i class="fas fa-car"></i>
+                                <span>${plate.text}</span>
+                                <small>${new Date(plate.timestamp).toLocaleTimeString()}</small>
+                            `;
+                            recentEvents.appendChild(li);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Ошибка загрузки последних событий:', error);
+                    });
+            }
+
+            function updateVideoDimensions() {
+                videoDimensions = {
+                    width: videoFeed.clientWidth,
+                    height: videoFeed.clientHeight
+                };
+                updateRoiDisplay();
+            }
+
+            // Функция для отображения ошибок
+            function showError(message) {
+                statusText.textContent = message;
+                statusIndicator.className = 'status-indicator';
+                cameraOverlay.style.display = 'flex';
+                cameraOverlay.innerHTML = `
+                    <div class="spinner"></div>
+                    <div class="loading-text">${message}</div>
+                    <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
+                        <i class="fas fa-sync-alt"></i> Повторить попытку
+                    </button>
+                `;
+                document.getElementById('retry_btn').addEventListener('click', connectToCamera);
+            }
 
             // Получаем информацию о камере
             fetch(`/api/camera_info/${cameraId}`)
@@ -344,82 +1458,110 @@
                             statusText.textContent = 'Подключено';
                             statusIndicator.className = 'status-indicator connected';
                             cameraOverlay.style.display = 'none';
-                            
-                            // Подключаемся к видеопотоку
-                            videoFeed.src = `/video_feed/${cameraId}?${Date.now()}`;
-                            
-                            // Устанавливаем обработчики событий
-                            videoFeed.onload = function() {
-                                statusText.textContent = 'Подключено';
-                                statusIndicator.className = 'status-indicator connected';
-                                updateTimestamp();
-                            };
 
+                            // Проверяем тип камеры
+                            if (data.camera_info && data.camera_info.url.endsWith('.html')) {
+                                // Для HTML-камер используем периодическое обновление
+                                const imageUrl = data.camera_info.url;
+                                updateHtmlCamera(imageUrl);
+                            } else {
+                                // Для обычных IP-камер используем видеопоток
+                                videoFeed.src = `/video_feed/${cameraId}?${Date.now()}`;
+                                videoFeed.onload = function() {
+                                    statusText.textContent = 'Подключено';
+                                    statusIndicator.className = 'status-indicator connected';
+                                    updateTimestamp();
+                                    updateVideoDimensions();
+                                };
+                            }
+
+                            // Устанавливаем обработчики событий
                             videoFeed.onerror = function() {
-                                statusText.textContent = 'Ошибка видеопотока';
-                                statusIndicator.className = 'status-indicator';
-                                cameraOverlay.style.display = 'flex';
-                                cameraOverlay.innerHTML = `
-                                    <div class="spinner"></div>
-                                    <div class="loading-text">Ошибка видеопотока</div>
-                                    <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
-                                        <i class="fas fa-sync-alt"></i> Повторить попытку
-                                    </button>
-                                `;
-                                document.getElementById('retry_btn').addEventListener('click', connectToCamera);
+                                showError('Ошибка подключения к камере');
                             };
                         } else {
-                            // Если камера не подключена, показываем ошибку
-                            statusText.textContent = 'Камера не подключена';
-                            statusIndicator.className = 'status-indicator';
-                            cameraOverlay.style.display = 'flex';
-                            cameraOverlay.innerHTML = `
-                                <div class="spinner"></div>
-                                <div class="loading-text">Камера не подключена</div>
-                                <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
-                                    <i class="fas fa-sync-alt"></i> Повторить попытку
-                                </button>
-                            `;
-                            document.getElementById('retry_btn').addEventListener('click', connectToCamera);
+                            showError('Камера не подключена');
                         }
                     })
                     .catch(error => {
-                        console.error('Ошибка проверки статуса:', error);
-                        statusText.textContent = 'Ошибка проверки статуса';
-                        statusIndicator.className = 'status-indicator';
+                        console.error('Ошибка:', error);
+                        showError('Ошибка при проверке статуса камеры');
                     });
             }
 
-            // Функция отображения ошибки
-            function showError(message) {
-                cameraOverlay.innerHTML = `
-                    <div style="text-align: center;">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 20px;"></i>
-                        <div class="loading-text">${message}</div>
-                        <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
-                            <i class="fas fa-sync-alt"></i> Повторить попытку
-                        </button>
-                    </div>
-                `;
+            // Функция для обновления HTML-камеры
+            function updateHtmlCamera(imageUrl) {
+                // Очищаем предыдущий интервал, если он существует
+                if (htmlCameraUpdateInterval) {
+                    clearInterval(htmlCameraUpdateInterval);
+                }
 
-                document.getElementById('retry_btn').addEventListener('click', function() {
-                    window.location.reload();
+                // Функция для получения и обновления изображения
+                function fetchAndUpdateImage() {
+                    const timestamp = new Date().getTime();
+                    const processedImageUrl = `/api/process_html_image/${cameraId}?url=${encodeURIComponent(imageUrl)}&t=${timestamp}`;
+
+                    // Создаем временный элемент для загрузки изображения
+                    const tempImg = new Image();
+                    tempImg.onload = function() {
+                        // Обновляем основное изображение
+                        videoFeed.src = processedImageUrl;
+                        statusText.textContent = 'Подключено';
+                        statusIndicator.className = 'status-indicator connected';
+                        cameraOverlay.style.display = 'none';
+                        updateTimestamp();
+                        updateVideoDimensions();
+                    };
+
+                    tempImg.onerror = function() {
+                        statusText.textContent = 'Ошибка загрузки изображения';
+                        statusIndicator.className = 'status-indicator error';
+                        cameraOverlay.style.display = 'flex';
+                        cameraOverlay.innerHTML = `
+                            <div class="spinner"></div>
+                            <div class="loading-text">Ошибка загрузки изображения</div>
+                            <button class="btn btn-primary" id="retry_btn" style="margin-top: 20px;">
+                                <i class="fas fa-sync-alt"></i> Повторить попытку
+                            </button>
+                        `;
+                        document.getElementById('retry_btn').addEventListener('click', () => {
+                            if (htmlCameraUpdateInterval) {
+                                clearInterval(htmlCameraUpdateInterval);
+                            }
+                            updateHtmlCamera(imageUrl);
+                        });
+                    };
+
+                    // Начинаем загрузку изображения
+                    tempImg.src = processedImageUrl;
+                }
+
+                // Запускаем первое обновление
+                fetchAndUpdateImage();
+
+                // Устанавливаем интервал обновления каждые 300мс
+                htmlCameraUpdateInterval = setInterval(fetchAndUpdateImage, 300);
+            }
+
+            // Функция обновления временной метки
+            function updateTimestamp() {
+                const now = new Date();
+                timestamp.textContent = now.toLocaleString('ru-RU', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
                 });
             }
 
-            // Обновление временной метки
-            function updateTimestamp() {
-                const now = new Date();
-                timestamp.textContent = now.toLocaleString();
-                setTimeout(updateTimestamp, 1000);
-            }
-
             // Отключение от камеры
-            disconnectBtn.addEventListener('click', function() {
+            function disconnectCamera() {
                 fetch('/api/disconnect', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: cameraId })
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: cameraId})
                 })
                 .then(response => response.json())
                 .then(data => {
@@ -430,66 +1572,16 @@
                 .catch(error => {
                     console.error('Ошибка отключения:', error);
                 });
-            });
+            }
 
             // Управление записью
-            recordBtn.addEventListener('click', function() {
-                isRecording = !isRecording;
-
+            function toggleRecording() {
                 if (isRecording) {
-                    recordBtn.innerHTML = '<i class="fas fa-stop"></i>';
-                    recordBtn.title = 'Остановить запись';
                     stopRecording();
-
-                    // Добавляем индикатор записи
-                    const recordingIndicator = document.createElement('div');
-                    recordingIndicator.className = 'recording-indicator';
-                    recordingIndicator.innerHTML = '<i class="fas fa-circle"></i> Запись';
-                    document.body.appendChild(recordingIndicator);
                 } else {
-                    recordBtn.innerHTML = '<i class="fas fa-circle"></i>';
-                    recordBtn.title = 'Запись';
                     startRecording();
-
-                    document.querySelector('.recording-indicator')?.remove();
                 }
-            });
-
-            // Снимок экрана
-            snapshotBtn.addEventListener('click', function() {
-                // Создаем canvas для сохранения изображения
-                const canvas = document.createElement('canvas');
-                canvas.width = videoFeed.videoWidth || videoFeed.naturalWidth;
-                canvas.height = videoFeed.videoHeight || videoFeed.naturalHeight;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
-
-                // Создаем ссылку для скачивания
-                const link = document.createElement('a');
-                link.download = `snapshot_${cameraId}_${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-
-                // Показываем уведомление
-                const notification = document.createElement('div');
-                notification.style.position = 'fixed';
-                notification.style.bottom = '80px';
-                notification.style.left = '50%';
-                notification.style.transform = 'translateX(-50%)';
-                notification.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-                notification.style.color = 'white';
-                notification.style.padding = '10px 20px';
-                notification.style.borderRadius = '5px';
-                notification.style.zIndex = '100';
-                notification.textContent = 'Снимок сохранен';
-                document.body.appendChild(notification);
-
-                setTimeout(() => {
-                    notification.style.opacity = '0';
-                    notification.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => notification.remove(), 500);
-                }, 2000);
-            });
+            }
 
             // Функция для начала записи
             async function startRecording() {
@@ -511,13 +1603,13 @@
                         recordingIndicator.innerHTML = '<i class="fas fa-circle"></i> Запись';
                         document.body.appendChild(recordingIndicator);
 
-                        showAlert('Запись начата', 'success');
+                        showNotification('Запись начата', 'success');
                     } else {
-                        showAlert(`Ошибка: ${data.message}`, 'danger');
+                        showNotification(`Ошибка: ${data.message}`, 'error');
                     }
                 } catch (error) {
                     console.error('Ошибка при начале записи:', error);
-                    showAlert('Ошибка сети при начале записи', 'danger');
+                    showNotification('Ошибка сети при начале записи', 'error');
                 }
             }
 
@@ -538,34 +1630,53 @@
                         // Удаляем индикатор записи
                         document.querySelector('.recording-indicator')?.remove();
 
-                        showAlert(`Запись сохранена: ${data.filename}`, 'success');
+                        showNotification(`Запись сохранена: ${data.filename}`, 'success');
                     } else {
-                        showAlert(`Ошибка: ${data.message}`, 'danger');
+                        showNotification(`Ошибка: ${data.message}`, 'error');
                     }
                 } catch (error) {
                     console.error('Ошибка при остановке записи:', error);
-                    showAlert('Ошибка сети при остановке записи', 'danger');
+                    showNotification('Ошибка сети при остановке записи', 'error');
                 }
             }
 
+            // Снимок экрана
+            function takeSnapshot() {
+                // Создаем canvas для сохранения изображения
+                const canvas = document.createElement('canvas');
+                canvas.width = videoFeed.videoWidth || videoFeed.naturalWidth;
+                canvas.height = videoFeed.videoHeight || videoFeed.naturalHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(videoFeed, 0, 0, canvas.width, canvas.height);
+
+                // Создаем ссылку для скачивания
+                const link = document.createElement('a');
+                link.download = `snapshot_${cameraId}_${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+                showNotification('Снимок сохранен', 'success');
+            }
 
             // Управление масштабом
-            zoomInBtn.addEventListener('click', function() {
+            function zoomIn() {
                 if (zoomLevel < 3) {
                     zoomLevel += 0.1;
                     videoFeed.style.transform = `scale(${zoomLevel})`;
+                    updateTooltip('Увеличение: ' + Math.round(zoomLevel * 100) + '%');
                 }
-            });
+            }
 
-            zoomOutBtn.addEventListener('click', function() {
+            function zoomOut() {
                 if (zoomLevel > 0.5) {
                     zoomLevel -= 0.1;
                     videoFeed.style.transform = `scale(${zoomLevel})`;
+                    updateTooltip('Увеличение: ' + Math.round(zoomLevel * 100) + '%');
                 }
-            });
+            }
 
             // Полноэкранный режим
-            fullscreenBtn.addEventListener('click', function() {
+            function toggleFullscreen() {
                 if (!isFullscreen) {
                     if (document.documentElement.requestFullscreen) {
                         document.documentElement.requestFullscreen();
@@ -587,53 +1698,29 @@
                         document.msExitFullscreen();
                     }
                 }
-            });
-
-            function showAlert(message, type = 'success') {
-                const alert = document.createElement('div');
-                alert.className = `alert alert-${type}`;
-                alert.innerHTML = `
-                    <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'times-circle' : 'info-circle'}"></i>
-                    ${message}
-                `;
-
-                document.body.appendChild(alert);
-
-                // Позиционирование уведомления
-                alert.style.position = 'fixed';
-                alert.style.top = '20px';
-                alert.style.right = '20px';
-                alert.style.zIndex = '2000';
-                alert.style.maxWidth = '400px';
-                alert.style.boxShadow = '0 3px 10px rgba(0,0,0,0.1)';
-
-                // Автоматическое скрытие
-                setTimeout(() => {
-                    alert.style.opacity = '0';
-                    alert.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => alert.remove(), 500);
-                }, 5000);
             }
-
-            // Следим за изменением полноэкранного режима
-            document.addEventListener('fullscreenchange', updateFullscreenStatus);
-            document.addEventListener('webkitfullscreenchange', updateFullscreenStatus);
-            document.addEventListener('msfullscreenchange', updateFullscreenStatus);
 
             function updateFullscreenStatus() {
                 isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
                 fullscreenBtn.innerHTML = isFullscreen ? '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
                 fullscreenBtn.title = isFullscreen ? 'Выйти из полноэкранного режима' : 'Полноэкранный режим';
+                updateVideoDimensions();
             }
 
-            // Добавляем периодическую проверку статуса
-            setInterval(() => {
+            // Проверка статуса камеры
+            function checkCameraStatus() {
                 fetch(`/api/camera_status/${cameraId}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.connected) {
                             statusText.textContent = 'Подключено';
                             statusIndicator.className = 'status-indicator connected';
+                            cameraOverlay.style.display = 'none';
+
+                            // Если камера подключена, но оверлей все еще виден, переподключаемся
+                            if (cameraOverlay.style.display === 'flex') {
+                                connectToCamera();
+                            }
                         } else {
                             statusText.textContent = 'Отключено';
                             statusIndicator.className = 'status-indicator';
@@ -651,7 +1738,463 @@
                     .catch(error => {
                         console.error('Ошибка проверки статуса:', error);
                     });
-            }, 5000); // Проверяем каждые 5 секунд
+            }
+
+            // Настройки панели
+            function toggleSettingsPanel() {
+                settingsPanel.classList.toggle('active');
+                if (settingsPanel.classList.contains('active')) {
+                    loadSettings();
+                }
+            }
+
+            function closeSettingsPanel() {
+                settingsPanel.classList.remove('active');
+            }
+
+            function toggleSidebar() {
+                sidebar.classList.toggle('collapsed');
+                sidebarToggle.innerHTML = sidebar.classList.contains('collapsed') ?
+                    '<i class="fas fa-chevron-right"></i>' : '<i class="fas fa-chevron-left"></i>';
+            }
+
+            // ROI функции
+            function startRoiSelection(e) {
+                if (!roiEnabled.checked) return;
+
+                const rect = videoFeed.getBoundingClientRect();
+                startX = ((e.clientX - rect.left) / rect.width) * 100;
+                startY = ((e.clientY - rect.top) / rect.height) * 100;
+                isSelecting = true;
+
+                roiSelection.style.display = 'block';
+                roiSelection.style.left = startX + '%';
+                roiSelection.style.top = startY + '%';
+                roiSelection.style.width = '0%';
+                roiSelection.style.height = '0%';
+            }
+
+            function handleRoiMouseMove(e) {
+                if (!isSelecting && !isDragging && !isResizing) return;
+
+                const rect = videoFeed.getBoundingClientRect();
+                const currentX = ((e.clientX - rect.left) / rect.width) * 100;
+                const currentY = ((e.clientY - rect.top) / rect.height) * 100;
+
+                if (isSelecting) {
+                    endX = currentX;
+                    endY = currentY;
+
+                    const x = Math.min(startX, endX);
+                    const y = Math.min(startY, endY);
+                    const width = Math.abs(endX - startX);
+                    const height = Math.abs(endY - startY);
+
+                    roiSelection.style.left = x + '%';
+                    roiSelection.style.top = y + '%';
+                    roiSelection.style.width = width + '%';
+                    roiSelection.style.height = height + '%';
+                } else if (isDragging) {
+                    const dx = currentX - startX;
+                    const dy = currentY - startY;
+
+                    const newX = Math.max(0, Math.min(100 - currentRoi.width, currentRoi.x + dx));
+                    const newY = Math.max(0, Math.min(100 - currentRoi.height, currentRoi.y + dy));
+
+                    roiOverlay.style.left = newX + '%';
+                    roiOverlay.style.top = newY + '%';
+
+                    startX = currentX;
+                    startY = currentY;
+                    currentRoi.x = newX;
+                    currentRoi.y = newY;
+                    updateRoiControls();
+                } else if (isResizing) {
+                    const dx = currentX - startX;
+                    const dy = currentY - startY;
+
+                    let newWidth = currentRoi.width;
+                    let newHeight = currentRoi.height;
+                    let newX = currentRoi.x;
+                    let newY = currentRoi.y;
+
+                    switch (resizeHandle) {
+                        case 'nw':
+                            newWidth = Math.max(10, Math.min(100 - newX, currentRoi.width - dx));
+                            newHeight = Math.max(10, Math.min(100 - newY, currentRoi.height - dy));
+                            newX = currentRoi.x + (currentRoi.width - newWidth);
+                            newY = currentRoi.y + (currentRoi.height - newHeight);
+                            break;
+                        case 'ne':
+                            newWidth = Math.max(10, Math.min(100 - newX, currentRoi.width + dx));
+                            newHeight = Math.max(10, Math.min(100 - newY, currentRoi.height - dy));
+                            newY = currentRoi.y + (currentRoi.height - newHeight);
+                            break;
+                        case 'sw':
+                            newWidth = Math.max(10, Math.min(100 - newX, currentRoi.width - dx));
+                            newHeight = Math.max(10, Math.min(100 - newY, currentRoi.height + dy));
+                            newX = currentRoi.x + (currentRoi.width - newWidth);
+                            break;
+                        case 'se':
+                            newWidth = Math.max(10, Math.min(100 - newX, currentRoi.width + dx));
+                            newHeight = Math.max(10, Math.min(100 - newY, currentRoi.height + dy));
+                            break;
+                    }
+
+                    roiOverlay.style.left = newX + '%';
+                    roiOverlay.style.top = newY + '%';
+                    roiOverlay.style.width = newWidth + '%';
+                    roiOverlay.style.height = newHeight + '%';
+
+                    startX = currentX;
+                    startY = currentY;
+                    currentRoi = { x: newX, y: newY, width: newWidth, height: newHeight };
+                    updateRoiControls();
+                    updateRoiHandlesPosition();
+                }
+            }
+
+            function endRoiSelection() {
+                if (!isSelecting && !isDragging && !isResizing) return;
+
+                if (isSelecting) {
+                    const x = Math.min(startX, endX);
+                    const y = Math.min(startY, endY);
+                    const width = Math.abs(endX - startX);
+                    const height = Math.abs(endY - startY);
+
+                    // Обновляем значения в форме
+                    roiX.value = Math.round(x);
+                    roiY.value = Math.round(y);
+                    roiWidth.value = Math.round(width);
+                    roiHeight.value = Math.round(height);
+
+                    // Сохраняем текущий ROI
+                    currentRoi = { x, y, width, height };
+                    updateRoiControls();
+                    updateRoiDisplay();
+
+                    // Автоматически сохраняем настройки
+                    saveSettings.click();
+                }
+
+                isSelecting = false;
+                isDragging = false;
+                isResizing = false;
+                roiSelection.style.display = 'none';
+            }
+
+            function cancelRoiSelection() {
+                if (isSelecting) {
+                    isSelecting = false;
+                    roiSelection.style.display = 'none';
+                }
+            }
+
+            function startRoiResize(e) {
+                e.stopPropagation();
+                isResizing = true;
+                resizeHandle = this.id.split('_').pop();
+
+                const rect = videoFeed.getBoundingClientRect();
+                startX = (e.clientX - rect.left) / rect.width * 100;
+                startY = (e.clientY - rect.top) / rect.height * 100;
+            }
+
+            function updateRoiDisplay() {
+                if (roiEnabled.checked) {
+                    roiOverlay.style.display = 'block';
+                    roiOverlay.style.left = currentRoi.x + '%';
+                    roiOverlay.style.top = currentRoi.y + '%';
+                    roiOverlay.style.width = currentRoi.width + '%';
+                    roiOverlay.style.height = currentRoi.height + '%';
+
+                    // Показываем ручки для изменения размера
+                    updateRoiHandlesPosition();
+                    [roiHandleNW, roiHandleNE, roiHandleSW, roiHandleSE].forEach(h => h.style.display = 'block');
+
+                    // Добавляем возможность перетаскивания ROI
+                    roiOverlay.style.cursor = 'move';
+                    roiOverlay.addEventListener('mousedown', startRoiDrag);
+                } else {
+                    roiOverlay.style.display = 'none';
+                    [roiHandleNW, roiHandleNE, roiHandleSW, roiHandleSE].forEach(h => h.style.display = 'none');
+                }
+            }
+
+            function startRoiDrag(e) {
+                e.stopPropagation();
+                isDragging = true;
+
+                const rect = videoFeed.getBoundingClientRect();
+                startX = (e.clientX - rect.left) / rect.width * 100;
+                startY = (e.clientY - rect.top) / rect.height * 100;
+            }
+
+            function updateRoiHandlesPosition() {
+                const x = parseFloat(roiOverlay.style.left);
+                const y = parseFloat(roiOverlay.style.top);
+                const width = parseFloat(roiOverlay.style.width);
+                const height = parseFloat(roiOverlay.style.height);
+
+                roiHandleNW.style.left = `calc(${x}% - 7px)`;
+                roiHandleNW.style.top = `calc(${y}% - 7px)`;
+
+                roiHandleNE.style.left = `calc(${x + width}% - 7px)`;
+                roiHandleNE.style.top = `calc(${y}% - 7px)`;
+
+                roiHandleSW.style.left = `calc(${x}% - 7px)`;
+                roiHandleSW.style.top = `calc(${y + height}% - 7px)`;
+
+                roiHandleSE.style.left = `calc(${x + width}% - 7px)`;
+                roiHandleSE.style.top = `calc(${y + height}% - 7px)`;
+            }
+
+            function updateRoiFromControls() {
+                currentRoi = {
+                    x: parseInt(roiX.value) || 0,
+                    y: parseInt(roiY.value) || 0,
+                    width: parseInt(roiWidth.value) || 100,
+                    height: parseInt(roiHeight.value) || 100
+                };
+                updateRoiDisplay();
+                updateRoiValueDisplays();
+            }
+
+            function updateRoiControls() {
+                roiX.value = Math.round(currentRoi.x);
+                roiY.value = Math.round(currentRoi.y);
+                roiWidth.value = Math.round(currentRoi.width);
+                roiHeight.value = Math.round(currentRoi.height);
+                updateRoiValueDisplays();
+            }
+
+            function updateRoiValueDisplays() {
+                roiXValue.textContent = Math.round(currentRoi.x) + '%';
+                roiYValue.textContent = Math.round(currentRoi.y) + '%';
+                roiWidthValue.textContent = Math.round(currentRoi.width) + '%';
+                roiHeightValue.textContent = Math.round(currentRoi.height) + '%';
+            }
+
+            function setRoiPreset(x, y, width, height) {
+                currentRoi = { x, y, width, height };
+                updateRoiControls();
+                updateRoiDisplay();
+
+                // Подсвечиваем активный пресет
+                roiPresets.forEach(preset => {
+                    const [px, py, pw, ph] = preset.dataset.preset.split(',').map(Number);
+                    if (px === x && py === y && pw === width && ph === height) {
+                        preset.classList.add('active');
+                    } else {
+                        preset.classList.remove('active');
+                    }
+                });
+            }
+
+            // Загрузка настроек
+            function loadSettings() {
+                fetch(`/api/camera/settings?camera_id=${cameraId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Ошибка загрузки настроек');
+                        }
+                        return response.json();
+                    })
+                    .then(settings => {
+                        roiEnabled.checked = settings.roi_enabled;
+                        currentRoi = {
+                            x: settings.roi_x,
+                            y: settings.roi_y,
+                            width: settings.roi_width,
+                            height: settings.roi_height
+                        };
+                        brightness.value = settings.brightness;
+                        contrast.value = settings.contrast;
+                        brightnessValue.textContent = settings.brightness;
+                        contrastValue.textContent = settings.contrast;
+                        frameSkipEnabled.checked = settings.frame_skip_enabled;
+                        frameSkipInterval.value = settings.frame_skip_interval;
+                        frameSkipIntervalValue.textContent = settings.frame_skip_interval;
+
+                        updateRoiDisplay();
+                        updateRoiControls();
+                    })
+                    .catch(error => {
+                        console.error('Ошибка загрузки настроек:', error);
+                        showNotification('Ошибка загрузки настроек', 'error');
+                    });
+            }
+
+            // Сохранение настроек
+            function saveCameraSettings() {
+                const settings = {
+                    camera_id: parseInt(cameraId),
+                    roi_enabled: roiEnabled.checked,
+                    roi_x: parseInt(roiX.value) || 0,
+                    roi_y: parseInt(roiY.value) || 0,
+                    roi_width: parseInt(roiWidth.value) || 100,
+                    roi_height: parseInt(roiHeight.value) || 100,
+                    brightness: parseInt(brightness.value) || 0,
+                    contrast: parseInt(contrast.value) || 0,
+                    frame_skip_enabled: frameSkipEnabled.checked,
+                    frame_skip_interval: parseInt(frameSkipInterval.value) || 1
+                };
+
+                // Валидация на стороне клиента
+                if (settings.roi_x < 0 || settings.roi_x > 100 ||
+                    settings.roi_y < 0 || settings.roi_y > 100 ||
+                    settings.roi_width < 0 || settings.roi_width > 100 ||
+                    settings.roi_height < 0 || settings.roi_height > 100) {
+                    showNotification('Значения ROI должны быть от 0 до 100', 'error');
+                    return;
+                }
+
+                if (settings.brightness < -100 || settings.brightness > 100 ||
+                    settings.contrast < -100 || settings.contrast > 100) {
+                    showNotification('Значения яркости и контраста должны быть от -100 до 100', 'error');
+                    return;
+                }
+
+                if (settings.frame_skip_interval < 1 || settings.frame_skip_interval > 10) {
+                    showNotification('Интервал пропуска кадров должен быть от 1 до 10', 'error');
+                    return;
+                }
+
+                fetch('/api/camera/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.error || 'Ошибка сохранения настроек');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    showNotification('Настройки успешно сохранены', 'success');
+                    closeSettingsPanel();
+
+                    if (result.settings) {
+                        roiEnabled.checked = result.settings.roi_enabled;
+                        currentRoi = {
+                            x: result.settings.roi_x,
+                            y: result.settings.roi_y,
+                            width: result.settings.roi_width,
+                            height: result.settings.roi_height
+                        };
+                        brightness.value = result.settings.brightness;
+                        contrast.value = result.settings.contrast;
+                        brightnessValue.textContent = result.settings.brightness;
+                        contrastValue.textContent = result.settings.contrast;
+                        frameSkipEnabled.checked = result.settings.frame_skip_enabled;
+                        frameSkipInterval.value = result.settings.frame_skip_interval;
+                        frameSkipIntervalValue.textContent = result.settings.frame_skip_interval;
+
+                        updateRoiDisplay();
+                    }
+                })
+                .catch(error => {
+                    console.error('Ошибка сохранения настроек:', error);
+                    showNotification(error.message || 'Ошибка сохранения настроек', 'error');
+                });
+            }
+
+            // Сброс настроек
+            function resetCameraSettings() {
+                if (confirm('Вы уверены, что хотите сбросить настройки этой камеры к значениям по умолчанию?')) {
+                    fetch(`/api/camera/settings/reset?camera_id=${cameraId}`, {
+                        method: 'POST'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(data => {
+                                throw new Error(data.error || 'Ошибка сброса настроек');
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(result => {
+                        showNotification('Настройки сброшены к значениям по умолчанию', 'success');
+
+                        if (result.settings) {
+                            roiEnabled.checked = result.settings.roi_enabled;
+                            currentRoi = {
+                                x: result.settings.roi_x,
+                                y: result.settings.roi_y,
+                                width: result.settings.roi_width,
+                                height: result.settings.roi_height
+                            };
+                            brightness.value = result.settings.brightness;
+                            contrast.value = result.settings.contrast;
+                            brightnessValue.textContent = result.settings.brightness;
+                            contrastValue.textContent = result.settings.contrast;
+                            frameSkipEnabled.checked = result.settings.frame_skip_enabled;
+                            frameSkipInterval.value = result.settings.frame_skip_interval;
+                            frameSkipIntervalValue.textContent = result.settings.frame_skip_interval;
+
+                            updateRoiDisplay();
+                            updateRoiControls();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Ошибка сброса настроек:', error);
+                        showNotification(error.message || 'Ошибка сброса настроек', 'error');
+                    });
+                }
+            }
+
+            // Уведомления
+            function showNotification(message, type = 'success') {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.innerHTML = `
+                    <div class="notification-icon">
+                        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'times-circle' : 'info-circle'}"></i>
+                    </div>
+                    <div class="notification-message">${message}</div>
+                    <div class="notification-close">
+                        <i class="fas fa-times"></i>
+                    </div>
+                `;
+
+                document.body.appendChild(notification);
+                setTimeout(() => notification.classList.add('show'), 10);
+
+                // Закрытие по клику
+                notification.querySelector('.notification-close').addEventListener('click', () => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                });
+
+                // Автоматическое закрытие
+                setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }, 5000);
+            }
+
+            // Всплывающие подсказки
+            function updateTooltip(text, x = 0, y = 0) {
+                if (!text) {
+                    tooltip.classList.remove('show');
+                    return;
+                }
+
+                tooltip.textContent = text;
+                tooltip.style.left = `${x}px`;
+                tooltip.style.top = `${y}px`;
+                tooltip.classList.add('show');
+
+                setTimeout(() => {
+                    tooltip.classList.remove('show');
+                }, 2000);
+            }
         });
     </script>
 </body>
